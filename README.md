@@ -1,5 +1,5 @@
 # instances
-The package to manage instances for my reseach problem
+The package to manage instances for my reseach problem.
 
 ## How to use it
 
@@ -10,3 +10,5 @@ r file_name.lp
 o
 dis sol var -
 ```
+
+Some of the models require `numpy`.
