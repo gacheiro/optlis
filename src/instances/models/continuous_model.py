@@ -24,7 +24,7 @@ q = {0: 1, 6: 1}
 
 def objective_function():
     """The objective function."""
-    return "min " + " + ".join(f"{r[j]} C{j}" for j in D)
+    return "min Cmax"
                                                   
 
 def eq_wt_depart(id=2):
@@ -36,36 +36,26 @@ def eq_wt_depart(id=2):
                 + f" = {q[i]}")
 
 
-def eq_wt_return(id=3):
-    """Equations to ensure that the WT return to origins after cleaning.
-    """
-    for i in O:
-        yield (f"c{id}.{i}: "
-                + " + ".join(f"x{j}.{i}" for j in D)
-                + f" = {q[i]}")
-
-
-def eq_wt_flow(id=4):
+def eq_wt_flow(id=3):
     """Equations to ensure the flow conservation.
     """
     for j in V:
-        vertices = set(V) - set((j,))
         yield (f"c{id}.{j}: "
-                + " + ".join(f"x{i}.{j}" for i in vertices)
-                + "".join(f" - x{j}.{i}" for i in vertices)
+                + " + ".join(f"x{i}.{j}" for i in V)
+                + "".join(f" - x{j}.{i}" for i in V)
                 + " = 0")
 
 
-def eq_clean(id=5):
+def eq_clean(id=4):
     """Equations to ensure that every node in D is serviced.
     """
-    for c, j in enumerate(D):
-            yield (f"c{id}.{c}: "
-                   + " + ".join(f"x{i}.{j}" for i in V if i != j)
-                   + " = 1")
+    for j in D:
+        yield (f"c{id}.{j}: "
+                + " + ".join(f"x{i}.{j}" for i in V)
+                + " = 1")
 
 
-def eq_completion_time(id=6):
+def eq_completion_time(id=5):
     """Equations to calculate the completion time of the nodes.
     """
     for j in D:
@@ -73,9 +63,16 @@ def eq_completion_time(id=6):
             yield (f"c{id}.{j}.{i}: C{i} - C{j} + {M} x{i}.{j} + {p[j]} x{i}.{j} <= {M}")
 
 
+def eq_cmax(id=6):
+    """Equations to calculate the Cmax."""
+    for j in V:
+        yield f"c{id}.{j}: Cmax - C{j} >= 0"
+
+
 def vars():
     """Model variables."""
     yield "bounds\n"
+    yield "Cmax >= 0\n"
     yield "\n".join(f"C{j} >= 0" for j in V)
     yield "\nbinaries\n"
     yield "\n".join(f"x{i}.{j}" for i in V
@@ -86,9 +83,9 @@ if __name__ == "__main__":
     print(objective_function(), end="\n\n")
     print("st", end="\n\n")
     print("\n".join(eq_wt_depart()), end="\n\n")
-    print("\n".join(eq_wt_return()), end="\n\n")
     print("\n".join(eq_wt_flow()), end="\n\n")
     print("\n".join(eq_clean()), end="\n\n")
     print("\n".join(eq_completion_time()), end="\n\n")
+    print("\n".join(eq_cmax()), end="\n\n")
     print("\n".join(vars()), end="\n\n")
     print("end")

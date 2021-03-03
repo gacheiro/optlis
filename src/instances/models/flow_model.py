@@ -5,6 +5,7 @@
         BUG: The model keeps sending WT to perform remaining work even if they are not required.
         BUG: The flow doesn't take a 'shortest path' strategy. It'll usually take a longer route
              than what is needed.
+        BUG: Using the OF (1 - r_i)x_i^t the z_i^t is only set to 1 at the last period.
 
     Improvements:
         TODO: Load problem data from a file.
@@ -13,7 +14,7 @@
               and the worktroop is free to move to other nodes.
 """
 
-N = 6
+N = 7
 E = 10
 
 # sets
@@ -33,17 +34,15 @@ D = (1, 2, 3, 4, 5)
 # constants
 r = {0: 0, 1: 0.8, 2: 0.3, 3: 0.4, 4: 0.2, 5: 0.75, 6: 0}
 p = {0: 0, 1: 2, 2: 1, 3: 1, 4: 1, 5: 1, 6: 0}
-q = {0: 2, 6: 0}
+q = {0: 1, 6: 1}
 
-T = 3
+T = sum(p.values())
 
 
 def objective_function():
     """The objective function."""
-    R = sum(r.values()) * T
     return ("min "
-            + " ".join(f"- {r[i]} z{i}.{t}" for i in D for t in range(1, T+1))
-            + f" + {R}")
+            + " + ".join(f"{1 - r[i]} x{i}.{t}" for i in D for t in range(1, T+1)))
 
 
 def eq_nb_wt(id=2):
