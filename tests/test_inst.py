@@ -1,52 +1,56 @@
 from pathlib import Path
 
 import pytest
+import networkx as nx
 
-from instances.inst import loads, Arc, Node, Instance
+from instances.inst import loads, grid2d
 
 
 @pytest.fixture(scope="session")
-def instance_data():
-    return loads(Path("data/instances/example.dat"))
+def instance_grid3x3_data():
+    nodes = [
+        (0, {"type": 0, "p": 0, "q": 1, "r": 0.0}),
+        (1, {"type": 0, "p": 0, "q": 1, "r": 0.0}),
+        (2, {"type": 1, "p": 1, "q": 0, "r": 0.5}),
+        (3, {"type": 1, "p": 1, "q": 0, "r": 0.5}),
+        (4, {"type": 1, "p": 1, "q": 0, "r": 0.5}),
+        (5, {"type": 1, "p": 1, "q": 0, "r": 0.5}),
+        (6, {"type": 1, "p": 1, "q": 0, "r": 0.5}),
+        (7, {"type": 1, "p": 1, "q": 0, "r": 0.5}),
+        (8, {"type": 1, "p": 1, "q": 0, "r": 0.5}),
+    ]
+    edges = [
+        (0, 1), (0, 3),
+        (1, 2), (1, 4),
+        (2, 5),
+        (3, 4), (3, 6),
+        (4, 5), (4, 7),
+        (5, 8),
+        (6, 7),
+        (7, 8),
+    ]
+    return nodes, edges
 
 
-def test_loads(instance_data):
-    for key in ("V", "A", "O", "D", "T"):
-        assert key in instance_data
+@pytest.fixture(scope="session")
+def instance_grid3x3(instance_grid3x3_data):
+    G = nx.Graph()
+    G.add_nodes_from(instance_grid3x3_data[0])
+    G.add_edges_from(instance_grid3x3_data[1])
+    return G
 
 
-def test_instance(instance_data):
-    instance = Instance(**instance_data)
-    assert instance.V == [
-        Node(id=0, type=0, p=0, q=1, r=0.0),
-        Node(id=1, type=1, p=2, q=0, r=0.8),
-        Node(id=2, type=1, p=1, q=0, r=0.3),
-        Node(id=3, type=1, p=1, q=0, r=0.4),
-        Node(id=4, type=1, p=1, q=0, r=0.2),
-        Node(id=5, type=1, p=1, q=0, r=0.75),
-        Node(id=6, type=0, p=0, q=1, r=0.0),
-    ]
-    assert instance.A == [
-        Arc(0, 1), Arc(1, 0),
-        Arc(0, 2), Arc(2, 0),
-        Arc(1, 2), Arc(2, 1),
-        Arc(1, 3), Arc(3, 1),
-        Arc(2, 3), Arc(3, 2),
-        Arc(2, 5), Arc(5, 2),
-        Arc(3, 4), Arc(4, 3),
-        Arc(3, 6), Arc(6, 3),
-        Arc(4, 5), Arc(5, 4),
-        Arc(4, 6), Arc(6, 4),
-    ]
-    assert instance.O == [
-        Node(id=0, type=0, p=0, q=1, r=0.0),
-        Node(id=6, type=0, p=0, q=1, r=0.0),
-    ]
-    assert instance.D == [
-        Node(id=1, type=1, p=2, q=0, r=0.8),
-        Node(id=2, type=1, p=1, q=0, r=0.3),
-        Node(id=3, type=1, p=1, q=0, r=0.4),
-        Node(id=4, type=1, p=1, q=0, r=0.2),
-        Node(id=5, type=1, p=1, q=0, r=0.75),
-    ]
-    assert instance.T == 6
+def test_loads(instance_grid3x3_data):
+    """Tests the function to load an instance from a file."""
+    G = loads(Path("data/instances/grid3x3.dat"))
+    assert list(G.nodes(data=True)) == instance_grid3x3_data[0]
+    assert set(G.edges) == set(instance_grid3x3_data[1])
+
+
+def test_grid2d(instance_grid3x3_data):
+    """Tests the function to generate grid instances.
+       It tries to generate the same `grid3x3.dat` instance.
+    """
+    G = grid2d()
+    assert list(G.nodes(data=True)) == instance_grid3x3_data[0]
+    assert set(G.edges) == set(instance_grid3x3_data[1])
