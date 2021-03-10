@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import networkx as nx
 
-from instances.inst import loads, grid2d
+from instances import loads, grid2d
 
 
 @pytest.fixture(scope="session")
@@ -54,3 +54,11 @@ def test_grid2d(instance_grid3x3_data):
     G = grid2d()
     assert list(G.nodes(data=True)) == instance_grid3x3_data[0]
     assert set(G.edges) == set(instance_grid3x3_data[1])
+
+
+def test_Graph():
+    """Test the Graph class."""
+    G = loads(Path("data/instances/example.dat"))
+    assert list(G.origins) == [0, 1]
+    assert list(G.destinations) == [2, 3, 4, 5, 6, 7, 8]
+    assert list(G.time_periods) == list(range(1, 8))

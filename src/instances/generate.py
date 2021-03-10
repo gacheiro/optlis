@@ -3,48 +3,7 @@ import random
 import click
 import networkx as nx
 
-
-def loads(path):
-    """Loads an instance from a file."""
-    nodes = []
-    edges = []
-    with open(path, "r") as f:
-        nb_nodes = int(f.readline())
-        for _ in range(nb_nodes):
-            id, type, p, q, r = f.readline().split()
-            nodes.append((int(id), {
-                "type": int(type),
-                "p": int(p),
-                "q": int(q),
-                "r": float(r),
-            }))
-
-        nb_edges = int(f.readline())
-        for _ in range(nb_edges):
-            i, j = [int(u) for u in f.readline().split()]
-            edges.append((i, j))
-    
-    G = nx.Graph()
-    G.add_nodes_from(nodes)
-    G.add_edges_from(edges)
-    return G
-
-
-def save(G, path):
-    """Saves an instance to a file."""
-    nb_nodes = len(G.nodes)
-    nb_edges = len(G.edges)
-    with open(path, "w") as f:
-        f.write(f"{nb_nodes}\n")        
-        for (id, data) in G.nodes(data=True):
-            type, p, q, r = (data["type"],
-                             data["p"],
-                             data["q"],
-                             data["r"])
-            f.write(f"{id} {type} {p} {q} {r:.1f}\n")
-        f.write(f"{nb_edges}\n")
-        for (i, j) in G.edges():
-            f.write(f"{i} {j}\n")
+from instances.utils import save, Graph
 
 
 def grid2d(size=(3, 3),
@@ -71,7 +30,7 @@ def grid2d(size=(3, 3),
         G.nodes[i]["type"] = 1
         G.nodes[i]["p"] = randi(*p_range)
         G.nodes[i]["r"] = randf(*r_range)
-    return G
+    return Graph(G)
 
 
 @click.command()

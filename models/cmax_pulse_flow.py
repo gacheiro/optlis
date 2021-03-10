@@ -2,19 +2,39 @@ import pulp as plp
 import networkx as nx
 import click
 
-from instances.inst import loads
+from instances import loads
 
 
-def make_prob(V=[], O=[], D=[], T=[], p={}, q={}):
-    """Implement a model based on Christofides et al (1987) for the RCPSP,
+def make_prob(G):
+    """Implements a model based on Christofides et al (1987) for the RCPSP,
        except the precendence constraints.
     """
+    V = G.nodes()
+    # The set of origins
+    O = list(n for n in G.nodes() if G.nodes[n]["type"] == 0)
+    # The set of 'jobs' to process
+    D = list(n for n in G.nodes() if G.nodes[n]["type"] == 1)
+    # The estimated amount of time neeeded to process all jobs (an upper bound)
+    # indexed from 1 to T
+    sumT = sum(G.nodes[n]["p"] for n in G.nodes())
+    T = list(range(1, sumT+1))
+    # The duration of each job
+    p = nx.get_node_attributes(G, "p")
+    # The number of wt at each origin
+    q = nx.get_node_attributes(G, "q")
+
     prob = plp.LpProblem("Cmax_Pulse_Flow", plp.LpMinimize)
 
     # Creates the model's variables
     Cmax = plp.LpVariable("Cmax", lowBound=0, cat=plp.LpInteger)
-    x = plp.LpVariable.dicts("x", indexs=(V, V, T), cat=plp.LpBinary)
     C = plp.LpVariable.dicts("C", indexs=D, lowBound=0, cat=plp.LpInteger)
+    x = plp.LpVariable.dicts("x", indexs=(V, V, T), cat=plp.LpBinary)
+
+    prob.vars = {
+        "Cmax": Cmax,
+        "C": C,
+        "x": x,
+    }
 
     # Add the objective function to 'prob'
     prob += Cmax, "Makespan"
@@ -70,26 +90,12 @@ def make_prob(V=[], O=[], D=[], T=[], p={}, q={}):
 
 @click.command()
 @click.argument("path")
-def solve(path):
+def run(path):
+    """Runs the model from command line."""
     G = loads(path)
-    V = G.nodes()
-    # The set of origins
-    O = list(n for n in G.nodes() if G.nodes[n]["type"] == 0)
-    # The set of 'jobs' to process
-    D = list(n for n in G.nodes() if G.nodes[n]["type"] == 1)
-    # The estimated amount of time neeeded to process all jobs (an upper bound)
-    # indexed from 1 to T
-    sumT = sum(G.nodes[n]["p"] for n in G.nodes())
-    T = list(range(1, sumT+1))
-    # The duration of each job
-    p = nx.get_node_attributes(G, "p")
-    # The number of wt at each origin
-    q = nx.get_node_attributes(G, "q")
-
-    # Build and solve the problem using instance data
-    prob = make_prob(V, O, D, T, p, q)
+    prob = make_prob(G)
     # The problem is written to an .lp file
-    prob.writeLP("CmaxPulseFlow.lp")
+    prob.writeLP("CmaxPulse.lp")
     prob.solve()
     
     # Print variables with it's resolved optimum value
@@ -102,4 +108,4 @@ def solve(path):
 
 
 if __name__ == "__main__":
-    solve()
+    run()

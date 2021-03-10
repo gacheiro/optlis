@@ -2,7 +2,7 @@ import pulp as plp
 import networkx as nx
 import click
 
-from instances.inst import loads
+from instances import loads
 
 
 def make_prob(D=[], T=[], p={}, Q=0):
