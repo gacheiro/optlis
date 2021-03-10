@@ -42,7 +42,7 @@ def instance_grid3x3(instance_grid3x3_data):
 
 def test_loads(instance_grid3x3_data):
     """Tests the function to load an instance from a file."""
-    G = loads(Path("data/instances/grid3x3.dat"))
+    G = loads(Path("data/instances/example.dat"))
     assert list(G.nodes(data=True)) == instance_grid3x3_data[0]
     assert set(G.edges) == set(instance_grid3x3_data[1])
 

@@ -16,9 +16,11 @@ setup(
     include_package_data=False,
     install_requires=[
         "click>=7.1.2",
+        "jupyter>=1.0.0",
         "matplotlib>=3.3.4",
         "networkx>=2.5",
         "numpy>=1.20.1",
+        "pulp>=2.4",
         "pytest>=6.2.2",
     ],
 )

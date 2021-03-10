@@ -39,16 +39,6 @@ def eq_wt_depart(id=2):
                 + f" <= {q_i}")
 
 
-def eq_wt_depart2(id=3):
-    """Equations to ensure that the maximum number of WT is respected.
-    """
-    for t in range(2, T+1):
-        for i in O:
-            yield (f"c{id}.{i}.{t}: "
-                    + " + ".join(f"x{i}.{j}.{t}" for j in V)
-                    + f" = 0")
-
-
 def eq_nb_wt(id=4):
     """Equations to ensure that the maximum number of WT is respected.
     """
@@ -67,10 +57,10 @@ def eq_wt_flow(id=5):
     """
     for j in D:
         p_j = G.nodes[j]["p"]
-        for t in range(1, T+1-p_j):
+        for t in range(p_j + 1, T+1):
             yield (f"c{id}.{j}.{t}: "
-                    + " + ".join(f"x{i}.{j}.{t}" for i in V if i != j)
-                    + "".join(f" - x{j}.{i}.{t + p_j}" for i in V if i != j)
+                    + " + ".join(f"x{i}.{j}.{t - p_j}" for i in V if i != j)
+                    + "".join(f" - x{j}.{i}.{t}" for i in V if i != j)
                     + " = 0")
 
 
@@ -90,17 +80,6 @@ def eq_clean2(id=7):
         yield (f"c{id}.{j}: "
                 + " + ".join(f"x{j}.{i}.{t}" for i in V for t in range(1, T+1) if i != j)
                 + " = 1")
-
-
-def eq_completion_time(id=8):
-    """Equations to calculate the completion time of the nodes.
-    """
-    for j in D:
-        p_j = G.nodes[j]["p"]
-        yield (f"c{id}.{j}: "
-               + " + ".join(f"x{i}.{j}.{t}" for i in V for t in range(1, T+1) if i != j)
-               + " ".join(f" + x{j}.{j}.{t}" for t in range(1, T+1))
-               + f" = {p_j - 1}")
 
 
 def eq_cj(id=9):
@@ -125,9 +104,9 @@ def vars():
     yield "\n".join(f"C{j} >= 0" for j in V)
     yield "\nbinaries\n"
     yield " ".join(f"x{i}.{j}.{t}" for i in V
-                                    for j in V
-                                    for t in range(1, T+1)
-                                    if i !=j)
+                                   for j in V
+                                   for t in range(1, T+1)
+                                   if i !=j)
 
 
 @click.command()
@@ -144,11 +123,9 @@ def generate_lp(path):
     print("st", end="\n\n")
     print("\n".join(eq_wt_depart()), end="\n\n")
     print("\n".join(eq_nb_wt()), end="\n\n")
-#    print("\n".join(eq_wt_depart2()), end="\n\n")
     print("\n".join(eq_wt_flow()), end="\n\n")
     print("\n".join(eq_clean()), end="\n\n")
     print("\n".join(eq_clean2()), end="\n\n")
-#    print("\n".join(eq_completion_time()), end="\n\n")
     print("\n".join(eq_cj()), end="\n\n")
     print("\n".join(eq_cmax()), end="\n\n")
     print("\n".join(vars()), end="\n\n")

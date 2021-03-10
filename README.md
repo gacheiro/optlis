@@ -1,26 +1,22 @@
 # instances
-The package to manage instances for my reseach problem.
+The package to manage instances for my \[untitled\] reseach problem.
 
 ## Installation
-Once you are in a virtual environment, do:
+Make sure you have python >= 3.6, then, once you are in a virtual environment do:
 
 ```bash
 python setup.py install
 ```
 
-Or to install it editable mode:
+Or to install it in editable mode:
 ```bash
 pip install -e .
 ```
 
-## How to use it
+## Running a model
 
-Make sure you have python >= 3.6, then save the output of the models to a file. To load a lp in CPLEX, optimize and display the solution:
+To run a model in `models` do, for example:
 
+```bash
+python models/cmax_pulse.py data/instances/grid3x3.dat
 ```
-r file_name.lp
-o
-dis sol var -
-```
-
-Some of the models require `numpy`.
