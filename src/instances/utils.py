@@ -1,3 +1,5 @@
+from itertools import groupby
+
 import networkx as nx
 
 
@@ -6,17 +8,49 @@ class Graph(nx.Graph):
     
     @property
     def origins(self):
+        """Returns the list of origins."""
         # Note: is there a better way to do this?
         return [n for n in self.nodes if self.nodes[n]["type"] == 0]
 
-    @property    
+    @property 
     def destinations(self):
+        """Returns the list of destinations."""
         return [n for n in self.nodes if self.nodes[n]["type"] == 1]
 
     @property
     def time_periods(self):
-        sumT = sum(self.nodes[n]["p"] for n in self.nodes())
-        return list(range(1, sumT+1))
+        """Returns a list of time periods from 1 to T with T being
+           an upper bound i.e. the sum of all p_i miltiplied by 2
+           to try to accomodate the distance between nodes.
+
+           NOTE: This increases significantly the number of variables
+                 in the linear model. Might need a smarter way for 
+                 guessing T.
+           NOTE: If we are to consider the distance for crossing nodes
+                 it's even more difficult to guess an upper bound.
+        """
+        T = sum(self.nodes[n]["p"] for n in self.nodes())*2
+        return list(range(1, T+1))
+
+    @property
+    def precedencies(self):
+        """Returns a list of precedence represented by tuples
+          (i, j) where i must start before j i.e. r_i > r_j.
+          The precedencies must form an acyclic graph.
+        """
+        r = nx.get_node_attributes(self, "r")
+        # Create a dict sorted by the r attr desc
+        sortedr = {i: ri for i, ri in sorted(r.items(), key=lambda x: x[1],
+                                             reverse=True)}
+        aggr = {ri: list(li) for ri, li in groupby(sortedr.items(),
+                                                   key=lambda x: x[1])}
+        rvalues = list(aggr.keys())
+        for li, lj in zip(rvalues, rvalues[1:]):
+            for i, ri in aggr[li]:
+                for j, rj in aggr[lj]:
+                    # Last check: exclude origins from precedence
+                    if j not in self.origins:
+                        yield (i, j)
 
 
 def loads(path):
@@ -56,7 +90,7 @@ def save(G, path):
                              data["p"],
                              data["q"],
                              data["r"])
-            f.write(f"{id} {type} {p} {q} {r:.1f}\n")
+            f.write(f"{id} {type} {p} {q} {r:.2f}\n")
         f.write(f"{nb_edges}\n")
         for (i, j) in G.edges():
             f.write(f"{i} {j}\n")
