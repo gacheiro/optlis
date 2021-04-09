@@ -1,5 +1,4 @@
 from itertools import cycle
-from math import ceil
 
 import pulp as plp
 import networkx as nx
@@ -10,7 +9,7 @@ from instances import loads
 
 
 def make_prob(G):
-    """Implements a model based on Christofides et al (1987) for the RCPSP."""
+    """Implements the linear model for the problem."""
     V = G.nodes()
     # The set of origins
     O = list(n for n in G.nodes() if G.nodes[n]["type"] == 0)
@@ -23,88 +22,66 @@ def make_prob(G):
     # The risk at each destination
     r = nx.get_node_attributes(G, "r")
     # The distance between every pair of nodes
-    d = dict(nx.shortest_path_length(G))
+    c = dict(nx.shortest_path_length(G))
     # The estimated amount of time periods to process all jobs (an upper bound)
     # indexed from 1 to T
     T = G.time_periods
 
-    prob = plp.LpProblem("Cmax_Pulse_Flow", plp.LpMinimize)
-
     # Creates the model's variables
-    Cmax = plp.LpVariable("Cmax", lowBound=0, cat=plp.LpInteger)
-    S = plp.LpVariable.dicts("S", indexs=D, lowBound=0, cat=plp.LpInteger)
-    C = plp.LpVariable.dicts("C", indexs=D, lowBound=0, cat=plp.LpInteger)
-    x = plp.LpVariable.dicts("x", indexs=(V, V, T), cat=plp.LpBinary)
+    makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
+    sd = plp.LpVariable.dicts("sd", indexs=D, lowBound=0, cat=plp.LpInteger)
+    cd = plp.LpVariable.dicts("cd", indexs=D, lowBound=0, cat=plp.LpInteger)
+    y = plp.LpVariable.dicts("y", indexs=(V, V, T), cat=plp.LpBinary)
 
-    prob.vars = {
-        "Cmax": Cmax,
-        "S": S,
-        "C": C,
-        "x": x,
-    }
-
-    # Add the objective function to 'prob'
-    prob += Cmax, "Makespan"
+    # The objective function
+    prob = plp.LpProblem("Cmax_Pulse_Flow", plp.LpMinimize)
+    prob += makespan, "Makespan"
 
     # Flow depart from origins
     for i in O:
-        prob += (plp.lpSum([x[i][j][t] for t in T
-                                       for j in D]) <= q[i],
-                 f"Flow_depart_from_origin_{i}")
-
-    '''
-    # Ensure the maximum number of resources is respected
-    for t in T:
-        prob += (plp.lpSum([x[i][j][tau] for j in D
-                                         for i in V
-                                         for tau in range(t - p[i] + 1, t+1)
-                                         if tau >= 1])
-                <= sum(q.values()),
-                f"Resource_constraint_at_period_{t}")
-    '''
-
-    # Flow conservation constraints
-    for j in D:
-        for t in T:
-            prob += (plp.lpSum([x[i][j][t] for i in V])
-                     - plp.lpSum([x[j][i][t + p[j] + d[j][i]] for i in V if t + p[j] + d[j][i] <= T[-1]]) == 0,
-                     f"Flow_conservation_on_{j}_at_periods_{t}")
+        prob += (plp.lpSum([y[i][j][t] for t in T
+                                       for j in D]) <= q[i]
+        ), f"R1_Flow_depart_from_origin_{i}"
 
     # Every destination has to be cleaned at some point (1)
     for j in D:
-        prob += (plp.lpSum([x[i][j][t] for t in T
-                                       for i in V]) == 1,
-                 f"Clean_destination_arrive_{j}")
+        prob += (plp.lpSum([y[i][j][t] for t in T
+                                       for i in V if i != j]) == 1
+        ), f"R2_Enter_{j}"
 
-    # Every destination has to be cleaned at some point (2)
+    # Flow conservation constraints (2)
     for j in D:
-        prob += (plp.lpSum([x[j][i][t] for t in T
-                                       for i in V]) == 1,
-                 f"Clean_destination_depart_{j}")
+        for t in T:
+            prob += (
+                plp.lpSum([y[i][j][t - c[i][j] - p[j]] for i in V if i != j
+                                                       if t - c[i][j] - p[j]>= T[0]])
+                == plp.lpSum([y[j][i][t] for i in V if i != j])
+            ), f"R4_Flow_conservation_on_{j}_at_period_{t}"
 
     # Calculates the start time of every node
     for j in D:
-        prob += (S[j] - plp.lpSum([t*x[i][j][t] for t in T
-                                                for i in V]) == 0,
-                 f"Start_time_of_{j}")
+        prob += (sd[j] == plp.lpSum([t*y[i][j][t] for t in T
+                                                  for i in V if i != j])
+        ), f"R5_Start_date_of_{j}"
+
+    # Precedence constraints
+    for i, j in G.precedencies:
+        prob += sd[i] <= sd[j], f"R6_Start_cleaning_{i}_before_{j}"
 
     # Calculates the completion time of every node
     for j in D:
-        prob += C[j] - S[j] == p[j], f"Completion_time_of_{j}"
+        prob += (cd[j] == plp.lpSum([(t + c[i][j]) * y[i][j][t] for t in T
+                                                                for i in V if i != j])
+                          + p[j]
+        ), f"R7_Completion_date_of_{j}"
 
     # Calculates the makespan
     for j in D:
-        prob += Cmax - C[j] >= 0, f"Cmax_geq_C_{j}"
+        prob += makespan >= cd[j], f"R8_Cmax_geq_C_{j}"
 
-    # Add precedence constraints
-    for i, j in G.precedencies:
-            prob += S[i] <= S[j], f"Clean {i} before {j}"
-
-    # The problem is written to an .lp file
-    prob.writeLP("CmaxPulseFlow.lp")
     return prob
 
-
+'''
 def plot_prob(G, prob):
     """Plots the solution."""
     Cmax, C, x = (prob.vars["Cmax"],
@@ -188,28 +165,53 @@ def plot_prob(G, prob):
             node_color=colors,
             **options,
         )
-
+'''
 
 @click.command()
-@click.argument("path")
-def run(path):
-    """Runs the model from command line."""
-    G = loads(path)
+@click.argument("instance-file")
+@click.option("--time-limit",
+              help="The maximum time limit for the execution (in seconds).")
+@click.option("--log-path", help="File to write the execution log.")
+@click.option("--sol-path", help="File to write the solution (in json).")
+def run(instance_file, time_limit=None, log_path=None, sol_path=None):
+    """Runs the model from command line.
+
+       USAGE:
+
+       python cmax_pulse_flow.py [OPTIONS] INSTANCE_FILE
+
+       OPTIONS:
+
+       --help\n
+            show this message and exit
+       
+       --time-limit[=LIMIT]\n
+            the maximum time limit for the execution (in seconds)
+
+       --log-path[=LOG_PATH]\n
+            where to write the execution log
+
+       --sol-path[=SOL_PATH]\n
+            where to write the solution (in Pulp json format)
+    """
+    G = loads(instance_file)
     prob = make_prob(G)
-    # Solve the problem with CPLEX
-    # Comment this following line to use Pulp's builtin solver
-    solver = plp.getSolver('CPLEX_CMD')
+    prob.writeLP("CmaxPulseFlow.lp")
+
+    # Solves the problem with CPLEX (assuming CPLEX is availible)
+    solver = plp.getSolver('CPLEX_CMD', timeLimit=time_limit, logPath=log_path)
     prob.solve(solver)
+    prob.roundSolution()
 
-    # Print variables with it's resolved optimum value
+    # Exports the solution to a json file
+    if sol_path:
+        prob.to_json(sol_path, indent=2)
+
+    # Prints variables with it's resolved optimum value
+    print("")
     for v in prob.variables():
-        if v.varValue > 0:
+        if v.varValue and v.varValue > 0:
             print(v.name, "=", v.varValue)
-
-    # Print the optimum objective function value   
-    print("Makespan = ", plp.value(prob.objective))
-#    plot_prob(G, prob)
-#    plt.show()
 
 
 if __name__ == "__main__":

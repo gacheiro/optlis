@@ -19,17 +19,19 @@ class Graph(nx.Graph):
 
     @property
     def time_periods(self):
-        """Returns a list of time periods from 1 to T with T being
-           an upper bound i.e. the sum of all p_i miltiplied by 2
-           to try to accomodate the distance between nodes.
-
-           NOTE: This increases significantly the number of variables
-                 in the linear model. Might need a smarter way for 
-                 guessing T.
-           NOTE: If we are to consider the distance for crossing nodes
-                 it's even more difficult to guess an upper bound.
+        """Returns a list of time periods from 1 to T (inclusive) with T being
+           an upper bound. T is estimated with the formula:
+           
+           (the graph's diameter * the number of nodes divided by
+           the number of wts) + the sum of the job durations.
         """
-        T = sum(self.nodes[n]["p"] for n in self.nodes())*2
+        nb_nodes, nb_wts, sum_durations = (
+            len(self.nodes),
+            sum(nx.get_node_attributes(self, "q").values()),
+            sum(nx.get_node_attributes(self, "p").values())
+        )
+        diameter = nx.diameter(self)
+        T = diameter*nb_nodes//nb_wts + sum_durations
         return list(range(1, T+1))
 
     @property
@@ -90,7 +92,7 @@ def save(G, path):
                              data["p"],
                              data["q"],
                              data["r"])
-            f.write(f"{id} {type} {p} {q} {r:.2f}\n")
+            f.write(f"{id} {type} {p} {q} {r:.1f}\n")
         f.write(f"{nb_edges}\n")
         for (i, j) in G.edges():
             f.write(f"{i} {j}\n")

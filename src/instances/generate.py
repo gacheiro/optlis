@@ -1,4 +1,5 @@
 import random
+from math import log, floor
 
 import click
 import networkx as nx
@@ -29,7 +30,8 @@ def grid2d(size=(3, 3),
     for i in range(nb_origins, nb_nodes):
         G.nodes[i]["type"] = 1
         G.nodes[i]["p"] = randi(*p_range)
-        G.nodes[i]["r"] = random.gauss(mu=0.5, sigma=0.11)
+    #    G.nodes[i]["r"] = random.gauss(mu=0.5, sigma=0.11)
+        G.nodes[i]["r"] = randf(*r_range)
     return Graph(G)
 
 

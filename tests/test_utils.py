@@ -15,8 +15,8 @@ def test_Graph():
     G = loads(Path("data/instances/example.dat"))
     assert list(G.origins) == [0, 1]
     assert list(G.destinations) == [2, 3, 4, 5, 6, 7, 8]
-    assert list(G.time_periods) == list(range(1, 15)) # NOTE: Tx2 to accomodate
-    assert set(G.precedencies) == {                   # the distance between nodes
+    assert list(G.time_periods) == list(range(1, 26)) # NOTE: see G.time_periods
+    assert set(G.precedencies) == {                   # docstring for the formula
         (8, 7), (7, 6), (7, 5),
         (6, 4), (5, 4), (4, 3), (3, 2),
     }
