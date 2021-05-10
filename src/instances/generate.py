@@ -4,7 +4,7 @@ from math import log, floor
 import click
 import networkx as nx
 
-from instances.utils import save, Graph
+from instances.utils import save_instance, Graph
 
 
 def grid2d(size=(3, 3),
@@ -48,7 +48,8 @@ def grid2d(size=(3, 3),
 @click.argument("path")
 def generate(size, norigins, p, q, r, path):
     G = grid2d(size, norigins, p, q, r)
-    save(G, path)
+    print(f"Instance generated with T={G.time_periods[-1]}")
+    save_instance(G, path)
 
 
 if __name__ == "__main__":

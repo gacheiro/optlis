@@ -1,3 +1,4 @@
+from math import ceil
 from itertools import groupby
 
 import networkx as nx
@@ -5,14 +6,14 @@ import networkx as nx
 
 class Graph(nx.Graph):
     """Subclass of nx.Graph class with some utility properties."""
-    
+
     @property
     def origins(self):
         """Returns the list of origins."""
         # Note: is there a better way to do this?
         return [n for n in self.nodes if self.nodes[n]["type"] == 0]
 
-    @property 
+    @property
     def destinations(self):
         """Returns the list of destinations."""
         return [n for n in self.nodes if self.nodes[n]["type"] == 1]
@@ -21,9 +22,10 @@ class Graph(nx.Graph):
     def time_periods(self):
         """Returns a list of time periods from 1 to T (inclusive) with T being
            an upper bound. T is estimated with the formula:
-           
-           (the graph's diameter * the number of nodes divided by
-           the number of wts) + the sum of the job durations.
+
+           (the graph's diameter * the number of nodes
+           + the sum of the job durations) divided by
+           the number of wts.
         """
         nb_nodes, nb_wts, sum_durations = (
             len(self.nodes),
@@ -31,7 +33,7 @@ class Graph(nx.Graph):
             sum(nx.get_node_attributes(self, "p").values())
         )
         diameter = nx.diameter(self)
-        T = diameter*nb_nodes//nb_wts + sum_durations
+        T = ceil((diameter*nb_nodes + sum_durations) / nb_wts)
         return list(range(1, T+1))
 
     @property
@@ -55,7 +57,7 @@ class Graph(nx.Graph):
                         yield (i, j)
 
 
-def loads(path):
+def load_instance(path):
     """Loads an instance from a file."""
     nodes = []
     edges = []
@@ -74,25 +76,34 @@ def loads(path):
         for _ in range(nb_edges):
             i, j = [int(u) for u in f.readline().split()]
             edges.append((i, j))
-    
-    G = Graph()
-    G.add_nodes_from(nodes)
-    G.add_edges_from(edges)
+
+        G = Graph()
+        G.add_nodes_from(nodes)
+        G.add_edges_from(edges)
+
+        # NOTE: some of the instances have the T written at the bottom of the
+        # file. Either make this the default or remove it.
+
     return G
 
 
-def save(G, path):
+def save_instance(G, path):
     """Saves an instance to a file."""
     nb_nodes = len(G.nodes)
     nb_edges = len(G.edges)
     with open(path, "w") as f:
-        f.write(f"{nb_nodes}\n")        
+
+        f.write(f"{nb_nodes}\n")
         for (id, data) in G.nodes(data=True):
             type, p, q, r = (data["type"],
                              data["p"],
                              data["q"],
                              data["r"])
             f.write(f"{id} {type} {p} {q} {r:.1f}\n")
+
         f.write(f"{nb_edges}\n")
         for (i, j) in G.edges():
             f.write(f"{i} {j}\n")
+
+        T = G.time_periods[-1]
+        f.write(f"{T}\n")

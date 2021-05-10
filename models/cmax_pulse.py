@@ -2,7 +2,7 @@ import pulp as plp
 import networkx as nx
 import click
 
-from instances import loads
+from instances import load_instance
 
 
 def make_prob(D=[], T=[], p={}, Q=0):
@@ -50,7 +50,7 @@ def make_prob(D=[], T=[], p={}, Q=0):
 @click.command()
 @click.argument("path")
 def solve(path):
-    G = loads(path)
+    G = load_instance(path)
     # The set of 'jobs' to process
     D = list(n for n in G.nodes() if G.nodes[n]["type"] == 1)
     # The number of machines to process the jobs
@@ -67,13 +67,13 @@ def solve(path):
     # The problem is written to an .lp file
     prob.writeLP("CmaxPulse.lp")
     prob.solve()
-    
+
     # Print variables with it's resolved optimum value
     for v in prob.variables():
         if v.varValue > 0:
             print(v.name, "=", v.varValue)
 
-    # Print the optimum objective function value   
+    # Print the optimum objective function value
     print("Makespan = ", plp.value(prob.objective))
 
 

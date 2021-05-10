@@ -1,14 +1,11 @@
-from itertools import cycle
-
 import pulp as plp
 import networkx as nx
 import click
-import matplotlib.pyplot as plt
 
-from instances import loads
+from instances import load_instance
 
 
-def make_prob(G):
+def make_prob(G, model=1):
     """Implements the linear model for the problem."""
     V = G.nodes()
     # The set of origins
@@ -35,7 +32,11 @@ def make_prob(G):
 
     # The objective function
     prob = plp.LpProblem("Cmax_Pulse_Flow", plp.LpMinimize)
-    prob += makespan, "Makespan"
+
+    if model == 1:
+        prob += makespan, "Makespan"
+    else:
+        prob += plp.lpSum([r[i] * cd[i]] for i in D)
 
     # Flow depart from origins
     for i in O:
@@ -43,13 +44,13 @@ def make_prob(G):
                                        for j in D]) <= q[i]
         ), f"R1_Flow_depart_from_origin_{i}"
 
-    # Every destination has to be cleaned at some point (1)
+    # Every destination has to be cleaned at some point
     for j in D:
         prob += (plp.lpSum([y[i][j][t] for t in T
                                        for i in V if i != j]) == 1
         ), f"R2_Enter_{j}"
 
-    # Flow conservation constraints (2)
+    # Flow conservation constraints
     for j in D:
         for t in T:
             prob += (
@@ -65,8 +66,9 @@ def make_prob(G):
         ), f"R5_Start_date_of_{j}"
 
     # Precedence constraints
-    for i, j in G.precedencies:
-        prob += sd[i] <= sd[j], f"R6_Start_cleaning_{i}_before_{j}"
+    if model == 1:
+        for i, j in G.precedencies:
+            prob += sd[i] <= sd[j], f"R6_Start_cleaning_{i}_before_{j}"
 
     # Calculates the completion time of every node
     for j in D:
@@ -81,99 +83,16 @@ def make_prob(G):
 
     return prob
 
-'''
-def plot_prob(G, prob):
-    """Plots the solution."""
-    Cmax, C, x = (prob.vars["Cmax"],
-                  prob.vars["C"],
-                  prob.vars["x"])
-
-    # The risk at each destination
-    r = nx.get_node_attributes(G, "r")
-
-    # Config graph style
-    options = {
-        "edgecolors": "tab:gray",
-        "alpha": 1,
-        "node_size": [100 + 300*ri for ri in r.values()],
-        "font_color": "white",
-        "font_size": 10,
-        "with_labels": True,
-    }
-    colors = []
-    for node, data in G.nodes(data=True):
-        if data["type"] == 0:
-            colors.append("tab:blue")
-        else:
-            colors.append("tab:red")
-
-    # Create a NxM subplots
-    figsize = (14, 15)
-    rows, cols = 5, 4
-    axes = plt.figure(figsize=figsize,
-                      constrained_layout=True).subplots(rows, cols)
-    axs = axes.flat
-
-    # Draws the whole graph at first ax
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, axs[0], node_color=colors, **options)
-
-    # Select periods with active flow between nodes
-    active_periods = sorted({t for t in G.time_periods
-                               for i in G.nodes
-                               for j in G.nodes
-                               if x[i][j][t].varValue == 1})
-
-    # The paths between every pair of nodes
-    # Used to display the flows
-    paths = dict(nx.all_pairs_shortest_path(G))
-
-    # We use a DiGraph to display the solution
-    DG = nx.DiGraph()
-    DG.add_nodes_from(G.nodes(data=True))
-
-    for ax, active_t in zip(axs[1:], active_periods):
-        ax.set_title(f"t={active_t}")
-
-        # Discover which destinations were already cleaned
-        for node in G.destinations:
-            if C[node].varValue <= active_t:
-                colors[node] = "tab:green"
-
-        # Active flow between nodes
-        sources_sinks = [(i, j) for i in DG.nodes
-                                for j in DG.nodes
-                                if x[i][j][active_t].varValue == 1]
-
-        # Draws each active flow with a diff style
-        styles = cycle(["solid", "dashed", "dashdot"])
-        for i, j in sources_sinks:
-            path = paths[i][j]
-            nx.draw_networkx_edges(
-                DG,
-                pos,
-                ax=ax,
-                style=next(styles),
-                edgelist=list(zip(path, path[1:])),
-            )
-
-        # Finally, draws the nodes
-        nx.draw_networkx(
-            DG,
-            pos,
-            ax=ax,
-            node_color=colors,
-            **options,
-        )
-'''
 
 @click.command()
 @click.argument("instance-file")
+@click.option("--model", type=int, default=1,
+              help="Chose the model to run, choices are 1 (default) or 2.")
 @click.option("--time-limit",
               help="The maximum time limit for the execution (in seconds).")
 @click.option("--log-path", help="File to write the execution log.")
 @click.option("--sol-path", help="File to write the solution (in json).")
-def run(instance_file, time_limit=None, log_path=None, sol_path=None):
+def run(instance_file, model=1, time_limit=None, log_path=None, sol_path=None):
     """Runs the model from command line.
 
        USAGE:
@@ -184,18 +103,20 @@ def run(instance_file, time_limit=None, log_path=None, sol_path=None):
 
        --help\n
             show this message and exit
-       
+       --model[=MODEL]\n
+            the model to run. Choices are 1 (default) or 2\n
        --time-limit[=LIMIT]\n
-            the maximum time limit for the execution (in seconds)
-
+            the maximum time limit for the execution (in seconds)\n
        --log-path[=LOG_PATH]\n
-            where to write the execution log
-
+            where to write the execution log\n
        --sol-path[=SOL_PATH]\n
-            where to write the solution (in Pulp json format)
+            where to write the solution (in Pulp json format)\n
     """
-    G = loads(instance_file)
-    prob = make_prob(G)
+    if model not in (1, 2):
+        raise ValueError("Chosen model is invalid. Please choose 1 or 2")
+
+    G = load_instance(instance_file)
+    prob = make_prob(G, model=model)
     prob.writeLP("CmaxPulseFlow.lp")
 
     # Solves the problem with CPLEX (assuming CPLEX is availible)
@@ -203,15 +124,21 @@ def run(instance_file, time_limit=None, log_path=None, sol_path=None):
     prob.solve(solver)
     prob.roundSolution()
 
-    # Exports the solution to a json file
-    if sol_path:
-        prob.to_json(sol_path, indent=2)
-
     # Prints variables with it's resolved optimum value
     print("")
     for v in prob.variables():
-        if v.varValue and v.varValue > 0:
+        if v.varValue:
             print(v.name, "=", v.varValue)
+
+    # Exports the solution to a very simple text file because
+    # pulp's solution files are too big. We only need the
+    # variables that are > 0 anyway ¯\_(ツ)_/¯
+    if sol_path:
+        with open(sol_path, "w") as sol_file:
+            sol_file.write(f"Solution for instance {instance_file}\n")
+            for v in prob.variables():
+                if v.varValue:
+                    sol_file.write(f"{v.name} = {v.varValue}\n")
 
 
 if __name__ == "__main__":
