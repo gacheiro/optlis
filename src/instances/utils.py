@@ -107,3 +107,27 @@ def save_instance(G, path):
 
         T = G.time_periods[-1]
         f.write(f"{T}\n")
+
+
+def import_solution(path):
+    """Imports and parses a solution file."""
+    variables = {}
+    with open(path, "r") as sol_file:
+        # Discard first line (header)
+        _ = sol_file.readline()
+        for line in sol_file:
+            variable, value = line.split("=")
+            variables[variable.strip()] = int(value)
+    return variables
+
+
+def export_solution(path, instance_name="", variables={}):
+    """Exports a solution to a very simple text file because
+       pulp's solution files are too big. We only need the
+       variables that are > 0 anyway ¯\_(ツ)_/¯
+    """
+    with open(path, "w") as sol_file:
+        sol_file.write(f"Solution for instance {instance_name}\n")
+        for var, value in variables.items():
+            if value and value > 0:
+                sol_file.write(f"{var} = {value}\n")
