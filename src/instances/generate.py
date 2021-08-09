@@ -1,6 +1,7 @@
 import random
 from math import log, floor
 
+import numpy as np
 from scipy.stats import triang
 import click
 import networkx as nx
@@ -28,6 +29,21 @@ def grid2d(size=(3, 3), nb_origins=1, p=1, q=1, r=0.5):
     return Graph(G)
 
 
+def grid_uniform_distribution(size, nb_origins=1, p=1, q=1):
+    """Generates a grid instance where the r_i attribute is randomly
+       chosen from the uniform distribution [0.1, 1).
+    """
+    graph = grid2d(size, nb_origins, p, q)
+    # Updates the r attributes with the random uniform distribution
+    nb_nodes = size[0]*size[1] - nb_origins
+    nb_destinations = nb_nodes - nb_origins
+    r_values = np.random.uniform(0.1, 1, nb_destinations)
+    for i, r in zip(range(nb_origins, nb_nodes), r_values):
+        graph.nodes[i]["r"] = r
+    return graph
+
+
+'''
 def grid_triangular_rdistribution(size, c, nb_origins=1, p=1, q=1):
     """Generates a grid instance where the r_i attribute is randomly
        generated over a triangular distribution, where c is the mode.
@@ -62,6 +78,27 @@ def generate(size, norigins, p, q, r, path):
         graph = grid_triangular_rdistribution(size, 0.5, norigins, p, q)
     elif r == "negative":
         graph = grid_triangular_rdistribution(size, 0.9, norigins, p, q)
+    else:
+        graph = grid2d(size, norigins, p, q, float(r))
+    save_instance(graph, path)
+'''
+
+
+@click.command()
+@click.option("--size", type=(int, int), default=(3, 3),
+              help="The size of the grid (m, n).")
+@click.option("--norigins", default=1, help="The number of origins.")
+@click.option("-p", type=int, default=1,
+              help="The value of p attributes for each destination ex. -p 1.")
+@click.option("-q", type=int, default=1,
+              help="The range of q attributes for each origin ex. -q 1.")
+@click.option("-r", help="The value of r attributes for each destination ex. -r 0.5 "
+                   "or -r uniform (default)", default="uniform")
+@click.option("--path", help="The path to save the instance. If not provided, print the"
+                        "output to the stdout.")
+def generate(size, norigins, p, q, r, path):
+    if r == "uniform":
+        graph = grid_uniform_distribution(size, norigins, p, q)
     else:
         graph = grid2d(size, norigins, p, q, float(r))
     save_instance(graph, path)

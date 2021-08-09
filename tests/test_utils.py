@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from instances import load_instance, import_solution
 
 
@@ -13,12 +15,19 @@ def test_load_instance(instance_grid3x3_data):
 def test_Graph():
     """Tests the Graph class."""
     G = load_instance(Path("data/instances/example.dat"))
-    assert list(G.origins) == [0, 1]
-    assert list(G.destinations) == [2, 3, 4, 5, 6, 7, 8]
-    assert list(G.time_periods)[-1] == 36 # NOTE: see G.time_periods
-    assert set(G.precedencies) == {       # docstring for the formula
+    assert list(G.origins) == [0]
+    assert list(G.destinations) == [1, 2, 3, 4, 5, 6, 7, 8]
+    # Same time horizon as defined in the instance file
+    assert list(G.time_periods)[-1] == 56
+    # We set G.time_horizon = None, now the time horizon is estimated
+    # by a formula (see G.time_periods)
+    G.time_horizon = None
+    assert list(G.time_periods)[-1] == 76
+    # TODO: remove this in favor of Graph.dag method
+    assert set(G.precedencies) == {       
         (8, 7), (7, 6), (7, 5),
         (6, 4), (5, 4), (4, 3), (3, 2),
+        (2, 1),
     }
 
 
@@ -26,30 +35,56 @@ def test_import_solution():
     """"Tests the function to import a solution from a file."""
     assert import_solution("data/solutions/example.sol") == dict(
         # Completion date
-        cd_2=28,
-        cd_3=23,
-        cd_4=21,
-        cd_5=16,
-        cd_6=14,
-        cd_7=8,
+        cd_1=56,
+        cd_2=50,
+        cd_3=42,
+        cd_4=36,
+        cd_5=30,
+        cd_6=22,
+        cd_7=16,
         cd_8=10,
-        makespan=28,
-        # Start date
-        sd_2=21,
-        sd_3=16,
-        sd_4=14,
-        sd_5=10,
-        sd_6=8,
-        sd_7=1,
+        makespan=56,
+        overall_risk=85.2,
+        sd_1=50,
+        sd_2=42,
+        sd_3=36,
+        sd_4=30,
+        sd_5=22,
+        sd_6=16,
+        sd_7=10,
         sd_8=1,
-        # Flows
         y_0_8_1=1,
-        y_1_7_1=1,
-        y_2_0_28=1,
-        y_3_0_23=1,
-        y_4_2_21=1,
-        y_5_3_16=1,
-        y_6_4_14=1,
-        y_7_6_8=1,
-        y_8_5_10=1,
+        y_1_0_56=1,
+        y_2_1_50=1,
+        y_3_2_42=1,
+        y_4_3_36=1,
+        y_5_4_30=1,
+        y_6_5_22=1,
+        y_7_6_16=1,
+        y_8_7_10=1,
     )
+
+
+@pytest.mark.parametrize("d, precedencies", [
+  (0, [(8, 7), (8, 6), (8, 5), (8, 4), (8, 3), (8, 2), (8, 1),
+       (7, 6), (7, 5), (7, 4), (7, 3), (7, 2), (7, 1),
+       (6, 4), (6, 3), (6, 2), (6, 1),
+       (5, 4), (5, 3), (5, 2), (5, 1),
+       (4, 3), (4, 2), (4, 1),
+       (3, 2), (3, 1),
+       (2, 1)]),
+  (0.1, [(8, 6), (8, 5), (8, 4), (8, 3), (8, 2), (8, 1),
+         (7, 4), (7, 3), (7, 2), (7, 1),
+         (6, 3), (6, 2), (6, 1),
+         (5, 3), (5, 2), (5, 1),
+         (4, 2), (4, 1),
+         (3, 1)]),
+  (0.3, [(8, 3), (8, 2), (8, 1),
+         (7, 2), (7, 1),
+         (6, 1),
+         (5, 1)]),
+  (1, [])])
+def test_Graph__dag(d, precedencies):
+    """Tests the dag generation."""
+    G = load_instance(Path("data/instances/example.dat"))
+    assert set(G.dag(d)) == set(precedencies)

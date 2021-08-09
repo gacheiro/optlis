@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from instances import load_instance, import_solution
@@ -17,16 +19,15 @@ def example_solution():
 
 def test_makespan(example_solution):
     """Tests the makespan function."""
-    assert makespan(example_solution) == 28
+    assert makespan(example_solution) == 56
 
 
 def test_weighted_sum_completion_dates(example_instance, example_solution):
     """Tests the weighted sum of completion dates function"""
-    assert weighted_sum_completion_dates(
-                example_instance,
-                example_solution) == 47.699999999999996
+    assert math.isclose(
+        weighted_sum_completion_dates(example_instance, example_solution), 85.2)
 
 
 def test_overall_risk(example_instance, example_solution):
     """Tests the overall risk function."""
-    assert overall_risk(example_instance, example_solution) == 44.5
+    assert math.isclose(overall_risk(example_instance, example_solution), 81.9)

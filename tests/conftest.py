@@ -1,4 +1,5 @@
 import pytest
+import networkx as nx
 
 
 @pytest.fixture(scope="session")
@@ -6,7 +7,7 @@ def instance_grid3x3_data():
     """"The data inside the example.dat instance."""
     nodes = [
         (0, {"type": 0, "p": 0, "q": 1, "r": 0.0}),
-        (1, {"type": 0, "p": 0, "q": 1, "r": 0.0}),
+        (1, {"type": 1, "p": 5, "q": 0, "r": 0.1}),
         (2, {"type": 1, "p": 5, "q": 0, "r": 0.2}),
         (3, {"type": 1, "p": 5, "q": 0, "r": 0.3}),
         (4, {"type": 1, "p": 5, "q": 0, "r": 0.4}),

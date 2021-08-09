@@ -1,3 +1,4 @@
+import warnings
 from math import ceil
 from itertools import groupby
 
@@ -6,6 +7,10 @@ import networkx as nx
 
 class Graph(nx.Graph):
     """Subclass of nx.Graph class with some utility properties."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.time_horizon = None
 
     @property
     def origins(self):
@@ -20,20 +25,25 @@ class Graph(nx.Graph):
 
     @property
     def time_periods(self):
-        """Returns a list of time periods from 1 to T (inclusive) with T being
-           an upper bound. T is estimated with the formula:
+        """Returns a list of time periods from 1 to T (inclusive).
+           The value of `G.time_horizon` is used for T if it's not None.
+
+           Otherwise, T is calculated with the formula:
 
            (the graph's diameter * the number of nodes
            + the sum of the job durations) divided by
            the number of wts.
         """
-        nb_nodes, nb_wts, sum_durations = (
-            len(self.nodes),
-            sum(nx.get_node_attributes(self, "q").values()),
-            sum(nx.get_node_attributes(self, "p").values())
-        )
-        diameter = nx.diameter(self)
-        T = ceil((diameter*nb_nodes + sum_durations) / nb_wts)
+        if self.time_horizon is not None:
+            T = self.time_horizon
+        else:
+            nb_nodes, nb_wts, sum_durations = (
+                len(self.nodes),
+                sum(nx.get_node_attributes(self, "q").values()),
+                sum(nx.get_node_attributes(self, "p").values())
+            )
+            diameter = nx.diameter(self)
+            T = ceil((diameter*nb_nodes + sum_durations) / nb_wts)
         return list(range(1, T+1))
 
     @property
@@ -54,6 +64,19 @@ class Graph(nx.Graph):
                 for j, rj in aggr[lj]:
                     # Last check: exclude origins from precedence
                     if j not in self.origins:
+                        yield (i, j)
+
+    def dag(self, d=0):
+        """Returns a Direct Acyclic Graph representing the
+           precedence constraints.
+           The `d` param is the relaxation threshold.
+        """
+        node_risk_dict = nx.get_node_attributes(self, "r")
+        for i, ri in node_risk_dict.items():
+            for j, rj in node_risk_dict.items():
+                if (ri > rj + d
+                    and i not in self.origins
+                    and j not in self.origins):
                         yield (i, j)
 
 
@@ -81,32 +104,43 @@ def load_instance(path):
         G.add_nodes_from(nodes)
         G.add_edges_from(edges)
 
-        # NOTE: some of the instances have the T written at the bottom of the
-        # file. Either make this the default or remove it.
+        try:
+            T = int(f.readline())
+            G.time_horizon = T
+        except (EOFError, ValueError):
+            warnings.warn("the instance file doesn't provide a time horizon")
 
     return G
 
 
-def save_instance(G, path):
+def _instance_to_str(G):
+    nb_nodes = len(G.nodes)
+    nb_edges = len(G.edges)
+    yield f"{nb_nodes}\n"
+    for (id, data) in G.nodes(data=True):
+        type, p, q, r = (data["type"],
+                            data["p"],
+                            data["q"],
+                            data["r"])
+        yield f"{id} {type} {p} {q} {r:.1f}\n"
+
+    yield f"{nb_edges}\n"
+    for (i, j) in G.edges():
+        yield f"{i} {j}\n"
+
+    T = G.time_periods[-1]
+    yield f"{T}\n"
+
+
+def save_instance(G, path=None):
     """Saves an instance to a file."""
     nb_nodes = len(G.nodes)
     nb_edges = len(G.edges)
-    with open(path, "w") as f:
-
-        f.write(f"{nb_nodes}\n")
-        for (id, data) in G.nodes(data=True):
-            type, p, q, r = (data["type"],
-                             data["p"],
-                             data["q"],
-                             data["r"])
-            f.write(f"{id} {type} {p} {q} {r:.1f}\n")
-
-        f.write(f"{nb_edges}\n")
-        for (i, j) in G.edges():
-            f.write(f"{i} {j}\n")
-
-        T = G.time_periods[-1]
-        f.write(f"{T}\n")
+    output = "".join(_instance_to_str(G))
+    if path:
+        with open(path, "w") as f:
+            f.write(output)
+    print(output)
 
 
 def import_solution(path):
@@ -117,14 +151,18 @@ def import_solution(path):
         _ = sol_file.readline()
         for line in sol_file:
             variable, value = line.split("=")
-            variables[variable.strip()] = int(value)
+            try:
+                variables[variable.strip()] = int(value)
+            except ValueError:
+                # special case for the overall_risk variable
+                variables[variable.strip()] = float(value)
     return variables
 
 
 def export_solution(path, instance_name="", variables={}):
     """Exports a solution to a very simple text file because
        pulp's solution files are too big. We only need the
-       variables that are > 0 anyway ¯\_(ツ)_/¯
+       variables that are > 0 anyway ¯\\_(ツ)_//¯
     """
     with open(path, "w") as sol_file:
         sol_file.write(f"Solution for instance {instance_name}\n")
