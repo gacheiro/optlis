@@ -87,39 +87,9 @@ def make_prob(G, model=1, relaxation_threshold=0.0):
     return prob
 
 
-@click.command()
-@click.argument("instance-path")
-@click.option("--model", type=int, default=1,
-              help="Choose the model to run, choices are 1 (default) or 2.")
-@click.option("-d", type=float, default=0.0,
-              help="Relaxation threshold for the priority rules.")
-@click.option("--time-limit",
-              help="The maximum time limit for the execution (in seconds).")
-@click.option("--log-path", help="File to write the execution log.")
-@click.option("--sol-path", help="File to write the solution (in json).")
-def run(instance_path, model=1, d=0.0, time_limit=None, log_path=None, sol_path=None):
-    """Runs the model from command line.
+def run(instance_path, model=1, d=0.0, time_limit=None,
+        log_path=None, sol_path=None):
 
-       USAGE:
-
-       python cmax_pulse_flow.py [OPTIONS] INSTANCE_PATH
-
-       OPTIONS:
-
-       --help\n
-            show this message and exit\n
-       --model[=MODEL]\n
-            the model to run. Choices are 1 (default) or 2\n
-       -d[=THRESHOLD]\n
-            the threshold relaxation for the priority rules (in range [0, 1]).\n
-            Default is 0 (strict priority rule).\n
-       --time-limit[=LIMIT]\n
-            the maximum time limit for the execution (in seconds)\n
-       --log-path[=LOG_PATH]\n
-            path to write the execution log\n
-       --sol-path[=SOL_PATH]\n
-            path to write the solution (in Pulp json format)\n
-    """
     if model not in (1, 2):
         raise ValueError("Chosen model is invalid. Please choose 1 or 2")
 
@@ -145,5 +115,42 @@ def run(instance_path, model=1, d=0.0, time_limit=None, log_path=None, sol_path=
                         {v.name: v.varValue for v in prob.variables()})
 
 
+@click.command()
+@click.argument("instance-path")
+@click.option("--model", type=int, default=1,
+              help="Choose the model to run, choices are 1 (default) or 2.")
+@click.option("-d", type=float, default=0.0,
+              help="Relaxation threshold for the priority rules.")
+@click.option("--time-limit",
+              help="The maximum time limit for the execution (in seconds).")
+@click.option("--log-path", help="File to write the execution log.")
+@click.option("--sol-path", help="File to write the solution (in json).")
+def command_line(instance_path, model=1, d=0.0, time_limit=None,
+                 log_path=None, sol_path=None):
+    """Runs the model from command line.
+
+       USAGE:
+
+       python cmax_pulse_flow.py [OPTIONS] INSTANCE_PATH
+
+       OPTIONS:
+
+       --help\n
+            show this message and exit\n
+       --model[=MODEL]\n
+            the model to run. Choices are 1 (default) or 2\n
+       -d[=THRESHOLD]\n
+            the threshold relaxation for the priority rules (in range [0, 1]).\n
+            Default is 0 (strict priority rule).\n
+       --time-limit[=LIMIT]\n
+            the maximum time limit for the execution (in seconds)\n
+       --log-path[=LOG_PATH]\n
+            path to write the execution log\n
+       --sol-path[=SOL_PATH]\n
+            path to write the solution variables\n
+    """
+    run(instance_path, model, d, time_limit, log_path, sol_path)
+
+
 if __name__ == "__main__":
-    run()
+    command_line()
