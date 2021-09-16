@@ -1,6 +1,8 @@
 import pytest
 import networkx as nx
 
+from instances import load_instance, import_solution
+
 
 @pytest.fixture(scope="session")
 def instance_grid3x3_data():
@@ -36,3 +38,13 @@ def instance_grid3x3(instance_grid3x3_data):
     G.add_nodes_from(instance_grid3x3_data[0])
     G.add_edges_from(instance_grid3x3_data[1])
     return G
+
+
+@pytest.fixture(scope="session")
+def example_instance():
+    return load_instance("data/instances/example.dat")
+
+
+@pytest.fixture(scope="session")
+def example_solution():
+    return import_solution("data/solutions/example.sol")
