@@ -5,7 +5,7 @@ import click
 from instances import load_instance, export_solution
 
 
-def make_prob(G, model=1, relaxation_threshold=0.0):
+def make_prob(G, relaxation_threshold=0.0):
     """Implements the mixed integer linear model for the problem."""
     V = G.nodes
     # The set of origins
@@ -33,11 +33,7 @@ def make_prob(G, model=1, relaxation_threshold=0.0):
 
     # The objective function
     prob = plp.LpProblem("Cmax_Pulse_Flow", plp.LpMinimize)
-
-    if model == 1:
-        prob += makespan, "Makespan"
-    else:
-        prob += overall_risk, "Overall_risk"
+    prob += makespan, "Makespan"
 
     # Flow depart from origins
     for i in O:
@@ -67,7 +63,7 @@ def make_prob(G, model=1, relaxation_threshold=0.0):
         ), f"R5_Start_date_of_{j}"
 
     # Precedence constraints
-    for i, j in G.dag(d=relaxation_threshold):
+    for i, j in G.dag(p=relaxation_threshold):
         prob += sd[i] <= sd[j], f"R6_Start_cleaning_{i}_before_{j}"
 
     # Calculates the completion time of every node
@@ -87,14 +83,11 @@ def make_prob(G, model=1, relaxation_threshold=0.0):
     return prob
 
 
-def run(instance_path, model=1, d=0.0, time_limit=None,
-        log_path=None, sol_path=None):
-
-    if model not in (1, 2):
-        raise ValueError("Chosen model is invalid. Please choose 1 or 2")
-
+def run_instance(instance_path="", p=0.0, time_limit=None,
+                 log_path=None, sol_path=None):
+    """Runs the model for an instance."""
     G = load_instance(instance_path)
-    prob = make_prob(G, model=model, relaxation_threshold=d)
+    prob = make_prob(G, p)
     
     # TODO: configure how the MILP are exported
     prob.writeLP("CmaxPulseFlow.lp")
@@ -117,15 +110,13 @@ def run(instance_path, model=1, d=0.0, time_limit=None,
 
 @click.command()
 @click.argument("instance-path")
-@click.option("--model", type=int, default=1,
-              help="Choose the model to run, choices are 1 (default) or 2.")
-@click.option("-d", type=float, default=0.0,
+@click.option("-p", type=float, default=0.0,
               help="Relaxation threshold for the priority rules.")
 @click.option("--time-limit",
               help="The maximum time limit for the execution (in seconds).")
 @click.option("--log-path", help="File to write the execution log.")
 @click.option("--sol-path", help="File to write the solution (in json).")
-def command_line(instance_path, model=1, d=0.0, time_limit=None,
+def command_line(instance_path, p=0.0, time_limit=None,
                  log_path=None, sol_path=None):
     """Runs the model from command line.
 
@@ -139,7 +130,7 @@ def command_line(instance_path, model=1, d=0.0, time_limit=None,
             show this message and exit\n
        --model[=MODEL]\n
             the model to run. Choices are 1 (default) or 2\n
-       -d[=THRESHOLD]\n
+       -p[=THRESHOLD]\n
             the threshold relaxation for the priority rules (in range [0, 1]).\n
             Default is 0 (strict priority rule).\n
        --time-limit[=LIMIT]\n
@@ -149,7 +140,7 @@ def command_line(instance_path, model=1, d=0.0, time_limit=None,
        --sol-path[=SOL_PATH]\n
             path to write the solution variables\n
     """
-    run(instance_path, model, d, time_limit, log_path, sol_path)
+    run_instance(instance_path, p, time_limit, log_path, sol_path)
 
 
 if __name__ == "__main__":

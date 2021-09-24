@@ -18,5 +18,5 @@ pip install -e .
 To run a model in `models` do, for example:
 
 ```bash
-python models/cmax_pulse_flow.py data/instances/grid3x3.dat
+python models/cmax_pulse_flow.py data/instances/example.dat
 ```
