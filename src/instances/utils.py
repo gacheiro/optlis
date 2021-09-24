@@ -46,35 +46,15 @@ class Graph(nx.Graph):
             T = ceil((diameter*nb_nodes + sum_durations) / nb_wts)
         return list(range(1, T+1))
 
-    @property
-    def precedencies(self):
-        """Returns a list of precedence represented by tuples
-          (i, j) where i must start before j i.e. r_i > r_j.
-          The precedencies must form an acyclic graph.
-        """
-        r = nx.get_node_attributes(self, "r")
-        # Create a dict sorted by the r attr desc
-        sortedr = {i: ri for i, ri in sorted(r.items(), key=lambda x: x[1],
-                                             reverse=True)}
-        aggr = {ri: list(li) for ri, li in groupby(sortedr.items(),
-                                                   key=lambda x: x[1])}
-        rvalues = list(aggr.keys())
-        for li, lj in zip(rvalues, rvalues[1:]):
-            for i, ri in aggr[li]:
-                for j, rj in aggr[lj]:
-                    # Last check: exclude origins from precedence
-                    if j not in self.origins:
-                        yield (i, j)
-
-    def dag(self, d=0):
+    def dag(self, p=0):
         """Returns a Direct Acyclic Graph representing the
            precedence constraints.
-           The `d` param is the relaxation threshold.
+           The `p` param is the relaxation threshold.
         """
         node_risk_dict = nx.get_node_attributes(self, "r")
         for i, ri in node_risk_dict.items():
             for j, rj in node_risk_dict.items():
-                if (ri > rj + d
+                if (ri > rj + p
                     and i not in self.origins
                     and j not in self.origins):
                         yield (i, j)

@@ -23,12 +23,6 @@ def test_Graph():
     # by a formula (see G.time_periods)
     G.time_horizon = None
     assert list(G.time_periods)[-1] == 76
-    # TODO: remove this in favor of Graph.dag method
-    assert set(G.precedencies) == {       
-        (8, 7), (7, 6), (7, 5),
-        (6, 4), (5, 4), (4, 3), (3, 2),
-        (2, 1),
-    }
 
 
 def test_import_solution():
@@ -65,7 +59,7 @@ def test_import_solution():
     )
 
 
-@pytest.mark.parametrize("d, precedencies", [
+@pytest.mark.parametrize(["p", "precedencies"], [
   (0, [(8, 7), (8, 6), (8, 5), (8, 4), (8, 3), (8, 2), (8, 1),
        (7, 6), (7, 5), (7, 4), (7, 3), (7, 2), (7, 1),
        (6, 4), (6, 3), (6, 2), (6, 1),
@@ -84,7 +78,7 @@ def test_import_solution():
          (6, 1),
          (5, 1)]),
   (1, [])])
-def test_Graph__dag(d, precedencies):
-    """Tests the dag generation."""
+def test_Graph__dag(p, precedencies):
+    """Tests the dag generation with the relaxation threshold."""
     G = load_instance(Path("data/instances/example.dat"))
-    assert set(G.dag(d)) == set(precedencies)
+    assert set(G.dag(p=p)) == set(precedencies)
