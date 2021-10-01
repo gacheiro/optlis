@@ -104,8 +104,8 @@ def run_instance(instance_path="", p=0.0, time_limit=None,
             print(v.name, "=", v.varValue)
 
     if sol_path:
-        export_solution(sol_path, instance_path,
-                        {v.name: v.varValue for v in prob.variables()})
+        export_solution({v.name: v.varValue for v in prob.variables()}, 
+                        instance_path, sol_path)
 
 
 @click.command()

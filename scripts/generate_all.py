@@ -1,6 +1,6 @@
-from instances import generate_instance, save_instance
+from instances import generate_instance, export_instance
 
-'''
+
 def grid_instances(export_dir=""):
     """Generate the set of instances over a grid layout
        and homogeneous, bipartite and uniformly distributed risk.
@@ -12,13 +12,13 @@ def grid_instances(export_dir=""):
             for q in [2**i for i in range(0, 10) if 2**i < n]:
                 G = generate_instance(size, nb_origins=1, q=q, topology="grid",
                                       risk_distribution=dist, seed=0)
-                save_instance(G, f"{export_dir}/g-n{n}-q{q}-r{dist[0]}.dat")
+                export_instance(G, f"{export_dir}/g-n{n}-q{q}-r{dist[0]}.dat")
             
             # We generate one last instance with n-1 worktroops
             G = generate_instance(size, nb_origins=1, q=n-1, topology="grid",
                                   risk_distribution=dist, seed=0)
-            save_instance(G, f"{export_dir}/g-n{n}-q{n-1}-r{dist[0]}.dat")
-'''
+            export_instance(G, f"{export_dir}/g-n{n}-q{n-1}-r{dist[0]}.dat")
+
 
 def hex_grid_instances(export_dir=""):
     """Generate the set of instances over a hexagonal grid layout
@@ -31,21 +31,21 @@ def hex_grid_instances(export_dir=""):
             G = generate_instance(size, nb_origins=1, q=1, topology="hexagonal",
                                   risk_distribution=dist, seed=0)
             n = len(G.nodes)
-            save_instance(G, f"{export_dir}/h-n{n}-q{1}-r{dist[0]}.dat")
+            export_instance(G, f"{export_dir}/h-n{n}-q{1}-r{dist[0]}.dat")
 
             for q in [2**i for i in range(1, 10) if 2**i < n]:
                 G = generate_instance(size, nb_origins=1, q=1, topology="hexagonal",
                                       risk_distribution=dist, seed=0)
-                save_instance(G, f"{export_dir}/h-n{n}-q{q}-r{dist[0]}.dat")
+                export_instance(G, f"{export_dir}/h-n{n}-q{q}-r{dist[0]}.dat")
 
             # We generate one last instance with n-1 wt (1 wt for each destination)
             G = generate_instance(size, nb_origins=1, q=n-1, topology="hexagonal",
                                   risk_distribution=dist, seed=0)
-            save_instance(G, f"{export_dir}/h-n{n}-q{n-1}-r{dist[0]}.dat")
+            export_instance(G, f"{export_dir}/h-n{n}-q{n-1}-r{dist[0]}.dat")
 
 
 def main():
-#    grid_instances(export_dir="data/instances/grid")
+    grid_instances(export_dir="data/instances/grid")
     hex_grid_instances(export_dir="data/instances/hex")
 
 
