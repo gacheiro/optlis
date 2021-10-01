@@ -93,34 +93,30 @@ def load_instance(path):
     return G
 
 
-def _instance_to_str(G):
+def write_instance(G, outfile):
+    """Writes a problem instance to a file"""
     nb_nodes = len(G.nodes)
     nb_edges = len(G.edges)
-    yield f"{nb_nodes}\n"
+    outfile.write(f"{nb_nodes}\n")
     for (id, data) in G.nodes(data=True):
         type, p, q, r = (data["type"],
-                            data["p"],
-                            data["q"],
-                            data["r"])
-        yield f"{id} {type} {p} {q} {r:.1f}\n"
+                         data["p"],
+                         data["q"],
+                         data["r"])
+        outfile.write(f"{id} {type} {p} {q} {r:.1f}\n")
 
-    yield f"{nb_edges}\n"
+    outfile.write(f"{nb_edges}\n")
     for (i, j) in G.edges():
-        yield f"{i} {j}\n"
+        outfile.write(f"{i} {j}\n")
 
     T = G.time_periods[-1]
-    yield f"{T}\n"
+    outfile.write(f"{T}\n")
 
 
-def save_instance(G, path=None):
-    """Saves an instance to a file."""
-    nb_nodes = len(G.nodes)
-    nb_edges = len(G.edges)
-    output = "".join(_instance_to_str(G))
-    if path:
-        with open(path, "w") as f:
-            f.write(output)
-    print(output)
+def export_instance(G, outfile_path):
+    """"Exports a problem instance to a text file."""
+    with open(outfile_path, "w") as outfile:
+        write_instance(G, outfile)
 
 
 def import_solution(path):
@@ -139,13 +135,18 @@ def import_solution(path):
     return variables
 
 
-def export_solution(path, instance_name="", variables={}):
+def write_solution(solution, instance_path, outfile):
+    """Writes a solution to a text file."""
+    outfile.write(f"Solution for instance {instance_path}\n")
+    for var, value in solution.items():
+        if value and value > 0:
+            outfile.write(f"{var} = {value}\n")
+
+
+def export_solution(solution, instance_path, outfile_path):
     """Exports a solution to a very simple text file because
        pulp's solution files are too big. We only need the
        variables that are > 0 anyway ¯\\_(ツ)_//¯
     """
-    with open(path, "w") as sol_file:
-        sol_file.write(f"Solution for instance {instance_name}\n")
-        for var, value in variables.items():
-            if value and value > 0:
-                sol_file.write(f"{var} = {value}\n")
+    with open(outfile_path, "w") as outfile:
+        write_solution(solution, instance_path, outfile)

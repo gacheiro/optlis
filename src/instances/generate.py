@@ -4,7 +4,7 @@ import click
 import numpy as np
 import networkx as nx
 
-from instances.utils import save_instance, Graph
+from instances.utils import export_instance, Graph
 
 
 def generate_graph(size=(1, 1), nb_origins=1, q=1, topology="grid"):
@@ -127,7 +127,7 @@ def generate(size, norigins, p, q, r, path):
         graph = grid_uniform(size, norigins, p, q)
     else:
         graph = grid(size, norigins, p, q, float(r))
-    save_instance(graph, path)
+    export_instance(graph, path)
 
 
 if __name__ == "__main__":
