@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pulp as plp
 import networkx as nx
 import click
@@ -5,7 +7,7 @@ import click
 from instances import load_instance, export_solution
 
 
-def make_prob(G, relaxation_threshold=0.0):
+def make_prob(G, relaxation_threshold=0.0, no_graph=False):
     """Implements the mixed integer linear model for the problem."""
     V = G.nodes
     # The set of origins
@@ -20,6 +22,12 @@ def make_prob(G, relaxation_threshold=0.0):
     r = nx.get_node_attributes(G, "r")
     # The distance between every pair of nodes
     c = dict(nx.shortest_path_length(G))
+    # Does not take in to consideration the cost to traverse
+    # through the graph
+    if no_graph:
+        for i in V:
+            for j in V:
+                c[i][j] = 0
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
     T = G.time_periods
@@ -83,14 +91,19 @@ def make_prob(G, relaxation_threshold=0.0):
     return prob
 
 
-def run_instance(instance_path="", p=0.0, time_limit=None,
-                 log_path=None, sol_path=None):
+def run_instance(instance_path="", relaxation_threshold=0.0, no_graph=False,
+                 time_limit=None, log_path=None, sol_path=None):
     """Runs the model for an instance."""
+    print(instance_path)
     G = load_instance(instance_path)
-    prob = make_prob(G, p)
+    prob = make_prob(G, relaxation_threshold, no_graph)
     
     # TODO: configure how the MILP are exported
     prob.writeLP("CmaxPulseFlow.lp")
+
+    if log_path:
+        log_path = Path(log_path)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Solves the problem with CPLEX (assuming CPLEX is availible)
     solver = plp.getSolver('CPLEX_CMD', timeLimit=time_limit, logPath=log_path)
@@ -104,6 +117,8 @@ def run_instance(instance_path="", p=0.0, time_limit=None,
             print(v.name, "=", v.varValue)
 
     if sol_path:
+        sol_path = Path(sol_path)
+        sol_path.parent.mkdir(parents=True, exist_ok=True)
         export_solution({v.name: v.varValue for v in prob.variables()}, 
                         instance_path, sol_path)
 
@@ -112,11 +127,15 @@ def run_instance(instance_path="", p=0.0, time_limit=None,
 @click.argument("instance-path")
 @click.option("-p", type=float, default=0.0,
               help="Relaxation threshold for the priority rules.")
-@click.option("--time-limit",
+@click.option("--no-graph", is_flag=True, default=False,
+              help="Ignore the cost of traversing through the graph.")
+@click.option("--time-limit", type=int,
               help="The maximum time limit for the execution (in seconds).")
-@click.option("--log-path", help="File to write the execution log.")
-@click.option("--sol-path", help="File to write the solution (in json).")
-def command_line(instance_path, p=0.0, time_limit=None,
+@click.option("--log-path", type=click.Path(),
+              help="Path to write the execution log.")
+@click.option("--sol-path", type=click.Path(),
+              help="Path to write the solution.")
+def command_line(instance_path, p=0.0, no_graph=False, time_limit=None,
                  log_path=None, sol_path=None):
     """Runs the model from command line.
 
@@ -128,11 +147,11 @@ def command_line(instance_path, p=0.0, time_limit=None,
 
        --help\n
             show this message and exit\n
-       --model[=MODEL]\n
-            the model to run. Choices are 1 (default) or 2\n
        -p[=THRESHOLD]\n
             the threshold relaxation for the priority rules (in range [0, 1]).\n
             Default is 0 (strict priority rule).\n
+       --no-graph\n
+            flag to ignore the cost of traversing through the graph\n
        --time-limit[=LIMIT]\n
             the maximum time limit for the execution (in seconds)\n
        --log-path[=LOG_PATH]\n
@@ -140,7 +159,7 @@ def command_line(instance_path, p=0.0, time_limit=None,
        --sol-path[=SOL_PATH]\n
             path to write the solution variables\n
     """
-    run_instance(instance_path, p, time_limit, log_path, sol_path)
+    run_instance(instance_path, p, no_graph, time_limit, log_path, sol_path)
 
 
 if __name__ == "__main__":

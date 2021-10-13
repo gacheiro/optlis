@@ -12,6 +12,7 @@ def generate_graph(size=(1, 1), nb_origins=1, q=1, topology="grid"):
     if topology == "hexagonal":
         g = nx.triangular_lattice_graph(size[0], size[1])
     else:
+        # Grid is the default topology
         g = nx.grid_2d_graph(*size)
 
     G = nx.convert_node_labels_to_integers(g)
@@ -33,8 +34,11 @@ def generate_graph(size=(1, 1), nb_origins=1, q=1, topology="grid"):
 
 
 def generate_instance(size=(1, 1), nb_origins=1, q=1, topology="grid",
-                      risk_distribution="homogeneous", seed=0):
-    """Generates a problem instance."""
+                      risk_distribution="homogeneous",
+                      job_duration_distribution="homogeneous", seed=0):
+    """Generates a problem instance with different configurations of
+       graph topology, risk and job duration distribution.
+    """
     G = generate_graph(size, nb_origins, q, topology)
     n = len(G.nodes)
 
@@ -45,12 +49,19 @@ def generate_instance(size=(1, 1), nb_origins=1, q=1, topology="grid",
             G.nodes[i]["r"] = r
             
     elif risk_distribution == "uniform":
-        np.random.seed(seed)
-        # Update the risk with values over an uniform distribution (0, 1)
+        rng = np.random.default_rng(seed)
+        # Update the risk with values over an uniform distribution [0.1, 1]
         for i, r in zip(range(1, n), 
-                        np.random.uniform(0.1, 1, n)):
+                        rng.uniform(0.1, 1, n)):
             G.nodes[i]["r"] = r
     
+    if job_duration_distribution == "uniform":
+        rng = np.random.default_rng(seed)
+        # Update the job duration with values over an uniform distribution [1, 11)
+        for i, p in zip(range(1, n), 
+                        rng.integers(1, 11, n)):
+            G.nodes[i]["p"] = p
+
     return Graph(G)
 
 
