@@ -130,7 +130,7 @@ def hexagonal(size=(3, 3), nb_origins=1, p=1, q=1, r=0.5):
 @click.option("-q", type=int, default=1,
               help="The range of q attributes for each origin ex. -q 1.")
 @click.option("-r", help="The value of r attributes for each destination ex. -r 0.5 "
-                   "or -r uniform (default)", default="uniform")
+                    "or -r uniform (default)", default="uniform")
 @click.option("--path", help="The path to save the instance. If not provided, print the"
                         "output to the stdout.")
 def generate(size, norigins, p, q, r, path):
