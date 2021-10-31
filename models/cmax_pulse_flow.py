@@ -94,19 +94,37 @@ def make_prob(G, relaxation_threshold=0.0, no_graph=False):
 def run_instance(instance_path="", relaxation_threshold=0.0, no_graph=False,
                  time_limit=None, log_path=None, sol_path=None):
     """Runs the model for an instance."""
-    print(instance_path)
     G = load_instance(instance_path)
     prob = make_prob(G, relaxation_threshold, no_graph)
     
     # TODO: configure how the MILP are exported
-    prob.writeLP("CmaxPulseFlow.lp")
+    # prob.writeLP("CmaxPulseFlow.lp")
 
     if log_path:
         log_path = Path(log_path)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Solves the problem with CPLEX (assuming CPLEX is availible)
-    solver = plp.getSolver('CPLEX_CMD', timeLimit=time_limit, logPath=log_path)
+    cplex_args = dict(
+        timeLimit=time_limit,
+        logPath=log_path
+    )
+
+    # Solves the problem with CPLEX (assumes CPLEX is availible)
+    try:
+        # Tries to disable PulP fixed mip re-optimization
+        # This needs to use fork https://github.com/thiagojobson/pulp
+        solver = plp.getSolver(
+            'CPLEX_CMD',
+            **cplex_args,
+            reoptimizeFixedMip=False,
+        )
+    except TypeError:
+        # In case the `reoptimizeFixedMip` flag is not supported (default PulP)
+        solver = plp.getSolver(
+            'CPLEX_CMD',
+            **cplex_args,
+        )
+
     prob.solve(solver)
     prob.roundSolution()
 
@@ -116,6 +134,7 @@ def run_instance(instance_path="", relaxation_threshold=0.0, no_graph=False,
         if v.varValue:
             print(v.name, "=", v.varValue)
 
+    # TODO: only write solution with it exists!
     if sol_path:
         sol_path = Path(sol_path)
         sol_path.parent.mkdir(parents=True, exist_ok=True)
