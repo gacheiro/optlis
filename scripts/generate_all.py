@@ -24,7 +24,7 @@ def hex_grid_instances(export_dir=""):
     """Generate the set of instances over a hexagonal grid layout
        with homogeneous and uniformly distributed risk and job duration.
     """
-    for rdist in ["homogeneous", "uniform"]:
+    for rdist in ["uniform"]:
         for pdist in ["homogeneous", "uniform"]:
             # Generates graphs with 8, 16, 32, 64, 128 nodes
             for size in [(3, 2), (7, 2), (8, 5), (15, 6), (15, 14)]:
@@ -45,7 +45,7 @@ def hex_grid_instances(export_dir=""):
                 )
 
                 # Generates instances with work-troops from 1 to n-1 in powers of 2
-                for q in [2**i for i in range(1, 10) if 2**i < n]:
+                for q in [2**i for i in range(1, 10) if 2**i < n] + [n-1]:
                     G = generate_instance(
                         size,
                         nb_origins=1,
@@ -60,22 +60,6 @@ def hex_grid_instances(export_dir=""):
                         G,
                         f"{export_dir}/hx-n{n}-p{pdist[0]}-q{q}-r{rdist[0]}.dat"
                     )
-
-                # Generates one last instance with n-1 work-troops (1 for each destination)
-                G = generate_instance(
-                    size,
-                    nb_origins=1,
-                    q=n-1,
-                    topology="hexagonal",
-                    risk_distribution=rdist,
-                    job_duration_distribution=pdist,
-                    seed=0
-                )
-
-                export_instance(
-                    G,
-                    f"{export_dir}/hx-n{n}-p{pdist[0]}-q{n-1}-r{rdist[0]}.dat"
-                )
 
 
 def main():
