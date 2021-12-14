@@ -10,4 +10,4 @@ def test_generate_instance():
     assert G.destinations == list(range(1, 8))
     for i in G.destinations:
         G.nodes[i]["r"] = 0.5
-    assert list(G.time_periods)[-1] == 31
+    assert list(G.time_periods)[-1] == 30

@@ -40,7 +40,7 @@ def run_all(p, no_graph):
                     log_path = OUTPUT_DIRECTORY / Path(test_case) / Path(pname) / Path("log") / Path(
                         f"hx-n{n}-p{pdist[0]}-q{q}-r{rdist[0]}.log"
                     )
-                    sol_path = Path(test_case) / Path(pname) / Path("sol") / Path(
+                    sol_path = OUTPUT_DIRECTORY / Path(test_case) / Path(pname) / Path("sol") / Path(
                         f"hx-n{n}-p{pdist[0]}-q{q}-r{rdist[0]}.sol"
                     )
 

@@ -4,7 +4,7 @@ from io import StringIO
 import pytest
 
 from instances import load_instance, write_instance, import_solution
-from instances.utils import write_solution
+from instances.utils import write_solution, decompose_makespan
 
 
 def test_Graph():
@@ -13,11 +13,11 @@ def test_Graph():
     assert list(G.origins) == [0]
     assert list(G.destinations) == [1, 2, 3, 4, 5, 6, 7, 8]
     # Same time horizon as defined in the instance file
-    assert list(G.time_periods)[-1] == 56
+    assert list(G.time_periods)[-1] == 55
     # We set G.time_horizon = None, now the time horizon is estimated
     # by a formula (see G.time_periods)
     G.time_horizon = None
-    assert list(G.time_periods)[-1] == 76
+    assert list(G.time_periods)[-1] == 75
 
 
 @pytest.mark.parametrize(["p", "precedencies"], [
@@ -81,7 +81,7 @@ def test_export_instance():
                                         "5 8",
                                         "6 7",
                                         "7 8",
-                                        "56\n"))
+                                        "55\n"))
 
 
 def test_import_solution():
@@ -141,3 +141,12 @@ def test_export_solution():
                                         "sd_1 = 2",
                                         "y_0_1_1 = 1",
                                         "y_1_0_2 = 1\n"))
+
+
+def test_decompose_makespan():
+    """Tests the function to decompose the makespan into travel time
+       and processing time.
+    """
+    G = load_instance(Path("data/instances/example.dat"))
+    sol = import_solution("data/solutions/example.sol")
+    assert decompose_makespan(G, sol) == (15, 40)
