@@ -1,11 +1,11 @@
 from pathlib import Path
 import sys
 sys.path.insert(0, "models/")
-from cmax_pulse_flow import run_instance
+from cmax_pulse_flow_idle_times import run_instance
 
 # Configure this accordingly
 INSTANCE_DIRECTORY = Path("data/instances/hex/")
-OUTPUT_DIRECTORY = Path("experiments-13-10/")
+OUTPUT_DIRECTORY = Path("experiments/")
 TIME_LIMIT = 3600
 
 
@@ -14,7 +14,7 @@ def run_all(p, no_graph):
     for rdist in ["uniform"]:
         for pdist in ["homogeneous", "uniform"]:
             for n in [8, 16, 32, 64]: #, 128]:
-                for q in [2**i for i in range(0, 10) if 2**i < n] + [n-1]:
+                for q in [2**i for i in range(0, 10) if 2**i <= n]:
 
                     # Test case (routing, scheduling or routing-scheduling)
                     if no_graph and pdist == "uniform":
@@ -35,13 +35,13 @@ def run_all(p, no_graph):
                         pname = "moderate"
 
                     instance_path = INSTANCE_DIRECTORY / Path(
-                        f"hx-n{n}-p{pdist[0]}-q{q}-r{rdist[0]}.dat"
+                        f"hx-n{n}-p{pdist[0]}-r{rdist[0]}-q{q}.dat"
                     )
                     log_path = OUTPUT_DIRECTORY / Path(test_case) / Path(pname) / Path("log") / Path(
-                        f"hx-n{n}-p{pdist[0]}-q{q}-r{rdist[0]}.log"
+                        f"hx-n{n}-p{pdist[0]}-r{rdist[0]}-q{q}.log"
                     )
                     sol_path = OUTPUT_DIRECTORY / Path(test_case) / Path(pname) / Path("sol") / Path(
-                        f"hx-n{n}-p{pdist[0]}-q{q}-r{rdist[0]}.sol"
+                        f"hx-n{n}-p{pdist[0]}-r{rdist[0]}-q{q}.sol"
                     )
 
                     run_instance(
