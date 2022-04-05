@@ -142,6 +142,7 @@ def write_solution(solution, instance_path, outfile):
             outfile.write(f"{var} = {value}\n")
 
 
+# NOTE: some variables with value 0 are ignored
 def export_solution(solution, instance_path, outfile_path):
     """Exports a solution to a very simple text file because
        pulp's solution files are too big. We only need the
@@ -215,7 +216,7 @@ def get_overall_travel_time(G, solution):
                     continue
                 elif solution.get(f"y_{i}_{j}_{t}") == 1:
                     fill_slots(t, t + c[i][j] - 1, "tr")
-    
+
     travel_time = sum(1 for t in time_slots.values() if t == "tr")
     print(travel_time)
 

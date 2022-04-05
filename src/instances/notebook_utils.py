@@ -1,8 +1,10 @@
 import math
+from itertools import repeat
 
 import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn.linear_model import LinearRegression
 
 from instances import load_instance
 from instances.utils import import_solution
@@ -82,6 +84,57 @@ def plot_gantt_diagram(instance_path, sol_path):
     ax.set_xlabel('time')
     ax.grid(True)
     plt.show()
+
+
+def linear_regression(x, y):
+    """Calculates the best fitting line representing a dataset.
+       See: https://realpython.com/linear-regression-in-python/
+    """
+    return LinearRegression().fit(x, y)
+
+
+def plot_points_with_best_fit_line(ax, x, y, psize=80, labels=["x", "y"]):
+    """Plots a scatter graph with a best fit line."""
+    ax.grid(True)
+    ax.set_xlabel(labels[0]), ax.set_ylabel(labels[1])
+    ax.scatter(x, y, s=psize)
+    rx = x.reshape((-1, 1))
+    ax.plot(x, linear_regression(rx, y).predict(rx))
+    print(x, y)
+    print('intercept:', linear_regression(rx, y).intercept_)
+    print('slope:', linear_regression(rx, y).coef_)
+    return ax
+
+
+def plot_task_policies(instance, sol, figsize=(18, 6)):
+    """"Plots the following graphs together:
+
+        Task risk vs. completion time
+        Task duration vs. completion time
+        Task distance from depot vs. completion time
+    """
+    tasks = instance.destinations
+    sp = dict(nx.shortest_path_length(instance))
+    xs = [np.array(x) for x in ([instance.nodes[i]["r"] for i in tasks],
+                                [instance.nodes[i]["p"] for i in tasks],
+                                [sp[0][i] for i in tasks])]
+    y = np.array([sol.get(f"cd_{i}", 0) for i in tasks])
+    x_labels = ("risk", "duration", "distance from depot")
+    y_label = "completion time"
+
+    fig, axs = plt.subplots(ncols=len(xs), figsize=figsize)
+    for ax, x, x_label in zip(axs, xs, x_labels):
+        plot_points_with_best_fit_line(ax, x, y, labels=[x_label, y_label])
+
+
+def plot_function(strict, moderate, none):
+    """"""
+    fig, axs = plt.subplots(ncols=3, figsize=(18, 6))
+    for ax in axs:
+        for priority_rules in (strict, moderate, none):
+            axs.plot(x, y)
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
 
 
 if __name__ == "__main__":

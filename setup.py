@@ -22,5 +22,6 @@ setup(
         "numpy>=1.9",
         "pulp>=2.4",
         "pytest>=6.2.2",
+        "sklearn",
     ],
 )
