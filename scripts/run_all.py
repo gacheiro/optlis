@@ -1,60 +1,49 @@
 from pathlib import Path
-import sys
-sys.path.insert(0, "models/")
-from cmax_pulse_flow_idle_times import run_instance
+from instances.solvers.cplex import run_instance
 
 # Configure this accordingly
 INSTANCE_DIRECTORY = Path("data/instances/hex/")
 OUTPUT_DIRECTORY = Path("experiments/")
-TIME_LIMIT = 3600
+TIME_LIMIT = 14_400 # 4 hours time limit
 
 
-def run_all(p, no_graph):
+def run_all(relaxation, no_setup_times):
     """Runs a bunch of instances in the benchmark."""
-    for rdist in ["uniform"]:
-        for pdist in ["homogeneous", "uniform"]:
-            for n in [8, 16, 32, 64]: #, 128]:
-                for q in [2**i for i in range(0, 10) if 2**i <= n]:
+    for n in [8, 16, 32, 64]: #, 128]:
+        for q in [2**i for i in range(0, 10) if 2**i <= n]:
 
-                    # Test case (routing, scheduling or routing-scheduling)
-                    if no_graph and pdist == "uniform":
-                        test_case = "scheduling"
-                    elif not no_graph and pdist == "homogeneous":
-                        test_case = "routing"
-                    elif not no_graph and pdist == "uniform":
-                        test_case = "routing-scheduling"
-                    else:
-                        continue
+            # Problem scneario (with or without setup times)
+            pscenario = "scheduling" if no_setup_times else "routing-scheduling"
 
-                    # Priority rules scenario (none, moderate, strict)
-                    if p == 0:
-                        pname = "strict"
-                    elif p == 1:
-                        pname = "none"
-                    else:
-                        pname = "moderate"
+            # Priority rules (none, moderate, strict)
+            if relaxation == 0:
+                pr = "strict"
+            elif relaxation == 1:
+                pr = "none"
+            else:
+                pr = "moderate"
 
-                    instance_path = INSTANCE_DIRECTORY / Path(
-                        f"hx-n{n}-p{pdist[0]}-r{rdist[0]}-q{q}.dat"
-                    )
-                    log_path = OUTPUT_DIRECTORY / Path(test_case) / Path(pname) / Path("log") / Path(
-                        f"hx-n{n}-p{pdist[0]}-r{rdist[0]}-q{q}.log"
-                    )
-                    sol_path = OUTPUT_DIRECTORY / Path(test_case) / Path(pname) / Path("sol") / Path(
-                        f"hx-n{n}-p{pdist[0]}-r{rdist[0]}-q{q}.sol"
-                    )
+            instance_name = f"hx-n{n}-pu-ru-q{q}"
 
-                    run_instance(
-                        instance_path,
-                        relaxation_threshold=p,
-                        no_graph=no_graph,
-                        time_limit=TIME_LIMIT,
-                        log_path=log_path,
-                        sol_path=sol_path
-                    )
+            instance_path = INSTANCE_DIRECTORY / Path(f"{instance_name}.dat")
+
+            log_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(pr) / Path("log")
+                        / Path(f"{instance_name}.log"))
+
+            sol_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(pr) / Path("sol")
+                        / Path(f"{instance_name}.sol"))
+
+            run_instance(
+                instance_path,
+                relaxation_threshold=relaxation,
+                no_setup_times=no_setup_times,
+                time_limit=TIME_LIMIT,
+                log_path=log_path,
+                sol_path=sol_path
+            )
 
 
 if __name__ == "__main__":
-    for no_graph in [False, True]:
-        for p in [0, 0.5, 1]:
-            run_all(p, no_graph)
+    for no_setup_times in [False, True]:
+        for relaxation in [0, 0.5, 1]:
+            run_all(relaxation, no_setup_times)
