@@ -1,8 +1,10 @@
 import warnings
 from math import ceil
-from itertools import groupby
+from decimal import Decimal
+from functools import cached_property
 
 import networkx as nx
+import numpy as np
 
 
 class Graph(nx.Graph):
@@ -12,18 +14,18 @@ class Graph(nx.Graph):
         super().__init__(*args, **kwargs)
         self.time_horizon = None
 
-    @property
+    @cached_property
     def origins(self):
         """Returns the list of origins."""
         # Note: is there a better way to do this?
         return [n for n in self.nodes if self.nodes[n]["type"] == 0]
 
-    @property
+    @cached_property
     def destinations(self):
         """Returns the list of destinations."""
         return [n for n in self.nodes if self.nodes[n]["type"] == 1]
 
-    @property
+    @cached_property
     def time_periods(self):
         """Returns a list of time periods from 0 to T - 1.
            The `G.time_horizon` attribute is used for T if it's not None.
@@ -45,6 +47,19 @@ class Graph(nx.Graph):
             T = ceil((diameter*nb_nodes + sum_durations) / nb_wts)
         return list(range(T))
 
+    @cached_property
+    def setup_times(self):
+        return dict(nx.shortest_path_length(self))
+
+    @cached_property
+    def task_durations(self):
+        return nx.get_node_attributes(self, "p")
+
+    @cached_property
+    def task_risks(self):
+        # NOTE: make this immutable
+        return np.array([r for r in nx.get_node_attributes(self, "r").values()])
+
     def dag(self, p=0):
         """Returns a Direct Acyclic Graph representing the
            precedence constraints.
@@ -53,7 +68,7 @@ class Graph(nx.Graph):
         node_risk_dict = nx.get_node_attributes(self, "r")
         for i, ri in node_risk_dict.items():
             for j, rj in node_risk_dict.items():
-                if (ri > rj + p
+                if (Decimal(ri) - Decimal(rj) > Decimal(p)
                     and i not in self.origins
                     and j not in self.origins):
                         yield (i, j)

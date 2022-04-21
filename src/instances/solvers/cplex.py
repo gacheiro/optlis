@@ -33,7 +33,7 @@ def make_prob(G, relaxation_threshold=0.0, no_setup_times=False):
     T = G.time_periods
 
     # Creates the model's variables
-    makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpContinuous)
+    makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
     overall_risk = plp.LpVariable("overall_risk", lowBound=0, cat=plp.LpContinuous)
     sd = plp.LpVariable.dicts("sd", indexs=D, lowBound=0, cat=plp.LpInteger)
     cd = plp.LpVariable.dicts("cd", indexs=D, lowBound=0, cat=plp.LpInteger)
