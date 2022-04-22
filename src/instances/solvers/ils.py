@@ -9,11 +9,8 @@ import numpy as np
 
 from instances import Graph, load_instance
 
-
 # TODO: check the `can_swap` function
 #       implement the multiple runs and stats
-#       implement the no setup times case
-
 
 @dataclass
 class Budget:
@@ -23,6 +20,7 @@ class Budget:
 
     def can_evaluate(self):
         return self.consumed < self.max
+
 
 @dataclass
 class Solution:
@@ -60,7 +58,9 @@ class Solution:
 
     def can_swap(self, i, j):
         """"Returns True if tasks at indices i and j can be swapped."""
-        if i >= j:
+        if self.relaxation_threshold >= 1:
+            return True
+        elif i >= j:
             return False
         # f = lambda k: self._risks[k] <= self._risks[j] + self.relaxation_threshold
         # return all(f(k) for k in range(i, j))
@@ -89,18 +89,59 @@ class Solution:
                         self.start_times, self.completion_times, self.consumed_budget)
 
 
+def solve_instance(instance_path, use_setup_times=True, **kwargs):
+    """Loads and solves a problem instance."""
+    return solve(load_instance(instance_path, use_setup_times), **kwargs)
+
+
+def solve(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
+          evaluation_budget=None, seed=0):
+    """ILS optimization loop to solve a problem instance."""
+    rng = np.random.default_rng(seed)
+    evaluation_budget = evaluation_budget or len(instance.destinations) * 10_000
+    budget = Budget(max=len(instance.destinations) * 10_000)
+    # Applies a decorator to cache solutions and keep track of budget consumation
+    evaluate = cached_evaluate(budget_evaluate)
+    # Generates initial solution and starts the optimization loop
+    best_solution = construct_solution(instance, relaxation_threshold)
+    apply_local_search(best_solution, budget, evaluate)
+    # Number of iterations without improvement
+    nom_improving = 0
+    while budget.can_evaluate() and nom_improving <= 100:
+        solution = best_solution.copy()
+        apply_perturbation(solution, perturbation_strength, rng=rng.integers)
+        apply_local_search(solution, budget, evaluate)
+        if evaluate(best_solution, budget) > evaluate(solution, budget):
+            best_solution = solution
+            nom_improving = 0
+        else:
+            nom_improving += 1
+    return best_solution
+
+
+def construct_solution(instance, relaxation_threhsold):
+    """Builds an initial feasible solution."""
+    task_list = sorted(instance.destinations,
+                       key=lambda t: instance.task_risks[t],
+                       reverse=True)
+    return Solution(instance, task_list, relaxation_threhsold)
+
+
 def cached_evaluate(f):
+    """Decorator to cache solutions' objetive.
+       This avoids solutions to be evaluated more than once.
+    """
     cache = {}
-    def inner(solution, budget):
+    def cached(solution, budget):
         _hash = hash(solution.task_list.tobytes())
         if _hash not in cache:
             cache[_hash] = f(solution, budget)
         return cache[_hash]
-    return inner
+    return cached
 
 
 def budget_evaluate(solution, budget):
-    """Evaluates a solution."""
+    """Decorator to keep track of the number of calls to the evaluation function."""
     budget.consumed += 1
     solution.consumed_budget = budget.consumed
     return earliest_finish_time(solution)
@@ -126,7 +167,7 @@ def earliest_finish_time(solution):
         for i, node_id in enumerate(solution.teams):
             start_time = solution.completion_times[node_id]
             # TODO: well documment this.
-            #       Avoids a team to "travel back in time".
+            #       Avoids a team can "travel back in time".
             #       Without this, priority rules may not be respected.
             #       See instance hx-n8-pu-ru-q4.
             if start_time < period:
@@ -144,43 +185,7 @@ def earliest_finish_time(solution):
         if solution.start_times[task_id] > period:
             period = solution.start_times[task_id]
 
-    return sum(solution.instance.task_risks * solution.completion_times)
-
-
-def construct_solution(instance, relaxation_threhsold):
-    """Builds an initial feasible solution."""
-    task_list = sorted(instance.destinations,
-                       key=lambda t: instance.nodes[t]["r"],
-                       reverse=True)
-    return Solution(instance, task_list, relaxation_threhsold)
-
-
-def solve_instance(instance_path, *args, **kwargs):
-    """..."""
-    return solve(load_instance(instance_path), *args, **kwargs)
-
-
-def solve(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
-          evaluation_budget=1000, seed=0):
-    """Solves a problem instance."""
-    rng = np.random.default_rng(seed)
-    budget = Budget(max=len(instance.destinations) * 10_000)
-    best_solution = construct_solution(instance, relaxation_threshold)
-    nom_improving = 0
-    evaluate = cached_evaluate(budget_evaluate)
-
-    apply_local_search(best_solution, budget, evaluate)
-
-    while budget.can_evaluate() and nom_improving <= 100:
-        solution = best_solution.copy()
-        apply_perturbation(solution, perturbation_strength, rng=rng.integers)
-        apply_local_search(solution, budget, evaluate)
-        if evaluate(best_solution, budget) > evaluate(solution, budget):
-            best_solution = solution
-            nom_improving = 0
-        else:
-            nom_improving += 1
-    return best_solution
+    return np.sum(solution.instance.task_risks * solution.completion_times)
 
 
 def apply_perturbation(solution, perturbation_strength, rng):
@@ -227,8 +232,8 @@ if __name__ == "__main__":
                         help="relaxation threshold (in range [0, 1], default 0.0)")
     parser.add_argument("--perturbation", type=float, default=0.5,
                         help="perturbation strength (in range [0, 1], default 0.5)")
-    parser.add_argument("--no-setup-times", action='store_true',
-                        help="Ignore sequennce-dependent setup times (default false)")
+    parser.add_argument("--no-setup-times", dest="setup-times", action="store_false",
+                        help="Disable sequence-dependent setup times")
     parser.add_argument("--runs", type=int, default=35,
                         help="number of repetitions to perform (default 35)")
     parser.add_argument("--parallel", type=int, default=1,
@@ -242,6 +247,7 @@ if __name__ == "__main__":
     x = time.time()
     pr.enable()
     solution = solve_instance(args["instance-path"],
+                              use_setup_times=args["setup-times"],
                               relaxation_threshold=args["relaxation"],
                               perturbation_strength=args["perturbation"],
                               seed=args["seed"])
@@ -252,5 +258,4 @@ if __name__ == "__main__":
     print(f"Objective = {earliest_finish_time(solution)}")
     print(f"Budget = {solution.consumed_budget}")
     print("Time = ", time.time() - x)
-    import pdb; pdb.set_trace()
     # pr.print_stats(sort='time')

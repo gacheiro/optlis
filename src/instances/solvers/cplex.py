@@ -7,27 +7,21 @@ import click
 from instances import load_instance, export_solution
 
 
-def make_prob(G, relaxation_threshold=0.0, no_setup_times=False):
+def make_prob(G, relaxation_threshold=0.0):
     """Implements an integer programming model to minimize the overall risk."""
     V = G.nodes
     # The set of origins
     O = G.origins
     # The set of 'jobs' to process
     D = G.destinations
+    # The duration of each job
+    p = G.task_durations
+    # The risk at each destination
+    r = G.task_risks
+    # The distance between every pair of nodes
+    c = G.setup_times
     # The number of wt at each origin
     q = nx.get_node_attributes(G, "q")
-    # The duration of each job
-    p = nx.get_node_attributes(G, "p")
-    # The risk at each destination
-    r = nx.get_node_attributes(G, "r")
-    # The distance between every pair of nodes
-    c = dict(nx.shortest_path_length(G))
-    # Does not take in to consideration the cost to traverse
-    # through the graph
-    if no_setup_times:
-        for i in V:
-            for j in V:
-                c[i][j] = 0
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
     T = G.time_periods
@@ -96,11 +90,11 @@ def make_prob(G, relaxation_threshold=0.0, no_setup_times=False):
     return prob
 
 
-def run_instance(instance_path="", relaxation_threshold=0.0, no_setup_times=False,
+def run_instance(instance_path="", relaxation_threshold=0.0, use_setup_times=True,
                  time_limit=None, log_path=None, sol_path=None):
     """Runs the model for an instance."""
-    G = load_instance(instance_path)
-    prob = make_prob(G, relaxation_threshold, no_setup_times)
+    G = load_instance(instance_path, use_setup_times)
+    prob = make_prob(G, relaxation_threshold)
 
     # TODO: configure how the MILP are exported
     prob.writeLP("OverallStatickRisk.lp")
@@ -152,7 +146,7 @@ def run_instance(instance_path="", relaxation_threshold=0.0, no_setup_times=Fals
 @click.option("--relaxation", type=float, default=0.0,
               help="Relaxation threshold for the priority rules.")
 @click.option("--no-setup-times", is_flag=True, default=False,
-              help="Ignore the cost of traversing through the graph.")
+              help="Disable sequence-dependent setup times.")
 @click.option("--time-limit", type=int,
               help="The maximum time limit for the execution (in seconds).")
 @click.option("--log-path", type=click.Path(),
@@ -175,7 +169,7 @@ def command_line(instance_path, relaxation=0.0, no_setup_times=False, time_limit
             the threshold relaxation for the priority rules (in range [0, 1]).\n
             Default is 0 (strict priority rule).\n
        --no-setup-times\n
-            flag to ignore the cost of traversing through the graph\n
+            Disable sequence-dependent setup times\n
        --time-limit[=LIMIT]\n
             the maximum time limit for the execution (in seconds)\n
        --log-path[=LOG_PATH]\n
@@ -183,7 +177,7 @@ def command_line(instance_path, relaxation=0.0, no_setup_times=False, time_limit
        --sol-path[=SOL_PATH]\n
             path to write the solution variables\n
     """
-    run_instance(instance_path, relaxation, no_setup_times, time_limit,
+    run_instance(instance_path, relaxation, not no_setup_times, time_limit,
                  log_path, sol_path)
 
 

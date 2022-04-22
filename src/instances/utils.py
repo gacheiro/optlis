@@ -49,7 +49,7 @@ class Graph(nx.Graph):
 
     @cached_property
     def setup_times(self):
-        return dict(nx.shortest_path_length(self))
+        return dict(nx.shortest_path_length(self, weight="weight"))
 
     @cached_property
     def task_durations(self):
@@ -74,7 +74,7 @@ class Graph(nx.Graph):
                         yield (i, j)
 
 
-def load_instance(path):
+def load_instance(path, use_setup_times=True):
     """Loads an instance from a file."""
     nodes = []
     edges = []
@@ -96,14 +96,15 @@ def load_instance(path):
 
         G = Graph()
         G.add_nodes_from(nodes)
-        G.add_edges_from(edges)
+        # Enable or disable sequence-dependent setup times
+        weight = 1 if use_setup_times else 0
+        G.add_edges_from(edges, weight=weight)
 
         try:
             T = int(f.readline())
             G.time_horizon = T
         except (EOFError, ValueError):
             warnings.warn("the instance file doesn't provide a time horizon")
-
     return G
 
 
