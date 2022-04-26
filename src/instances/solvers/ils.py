@@ -245,7 +245,7 @@ def _try_improve_solution(solution, budget, evaluate):
     return False
 
 
-if __name__ == "__main__":
+def from_command_line():
     parser = argparse.ArgumentParser()
     parser.add_argument("instance-path", type=Path,
                         help="problem instance path" )
@@ -293,3 +293,7 @@ if __name__ == "__main__":
     if args["profile"]:
         pr.disable()
         pr.print_stats(sort='time')
+
+
+if __name__ == "__main__":
+    from_command_line()
