@@ -2,7 +2,6 @@ import argparse
 import time
 from pathlib import Path
 from dataclasses import dataclass
-from decimal import Decimal
 
 import networkx as nx
 import numpy as np
@@ -27,18 +26,22 @@ class Solution:
     instance: Graph
     task_list: np.array
     relaxation_threshold: float
+    # NOTE: this should be "private" since it is
+    # not always in sync with `objective` (cache limitation).
     start_times: np.array
     completion_times: np.array
-    consumed_budget: int
+    ####
+    objective: float = -1
+    consumed_budget: int = -1
 
     def __init__(self, instance, task_list, relaxation_threshold=0,
-                 start_times=None, completion_times=None, consumed_budget=-1):
+                 start_times=None, completion_times=None,
+                 objective=-1, consumed_budget=-1):
 
-        (self.instance, self.task_list,
-         self.relaxation_threshold, self.consumed_budget) = (instance,
-                                                             np.array(task_list),
-                                                             relaxation_threshold,
-                                                             consumed_budget)
+        self.instance, self.task_list, self.relaxation_threshold = (instance,
+                                                                    np.array(task_list),
+                                                                    relaxation_threshold)
+        self.objective, self.consumed_budget = objective, consumed_budget
 
         if start_times is None or completion_times is None:
             nnodes = len(self.instance.nodes())
@@ -86,7 +89,8 @@ class Solution:
 
     def copy(self):
         return Solution(self.instance, self.task_list, self.relaxation_threshold,
-                        self.start_times, self.completion_times, self.consumed_budget)
+                        self.start_times, self.completion_times,
+                        self.objective, self.consumed_budget)
 
 
 def solve_instance(instance_path, use_setup_times=True, **kwargs):
@@ -95,36 +99,49 @@ def solve_instance(instance_path, use_setup_times=True, **kwargs):
 
 
 def solve(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
-          evaluation_budget=None, seed=0):
+          evaluations=None, seed=0):
     """ILS optimization loop to solve a problem instance."""
+    evaluations = evaluations or len(instance.destinations)*1000
+    initial_solution = construct_solution(instance, relaxation_threshold)
+    start_time = time.time()
     rng = np.random.default_rng(seed)
-    evaluation_budget = evaluation_budget or len(instance.destinations) * 10_000
-    budget = Budget(max=len(instance.destinations) * 10_000)
     # Applies a decorator to cache solutions and keep track of budget consumation
     evaluate = cached_evaluate(budget_evaluate)
-    # Generates initial solution and starts the optimization loop
-    best_solution = construct_solution(instance, relaxation_threshold)
+    best_solution, budget, it_without_improvements = (initial_solution,
+                                                      Budget(max=evaluations),
+                                                      0)
     apply_local_search(best_solution, budget, evaluate)
-    # Number of iterations without improvement
-    nom_improving = 0
-    while budget.can_evaluate() and nom_improving <= 100:
+    # Optimization loop
+    while budget.can_evaluate() and it_without_improvements < 1:
         solution = best_solution.copy()
-        apply_perturbation(solution, perturbation_strength, rng=rng.integers)
+        apply_perturbation(solution, perturbation_strength,
+                           rng=rng.integers)
         apply_local_search(solution, budget, evaluate)
         if evaluate(best_solution, budget) > evaluate(solution, budget):
             best_solution = solution
-            nom_improving = 0
+            it_without_improvements += 1
         else:
-            nom_improving += 1
-    return best_solution
+            it_without_improvements += 1
+    return best_solution, budget.consumed, time.time() - start_time
 
 
-def construct_solution(instance, relaxation_threhsold):
+def run_multiple(instance_path, runs=5, **kwargs):
+    for run, seed in zip(range(runs), range(runs)):
+        solution, consumed_budget, elapsed_time = solve_instance(instance_path,
+                                                                 seed=seed,
+                                                                 **kwargs)
+        print(f"Run #{run} (Seed: {seed}) -",
+              f"Objective: {solution.objective:.3f} (@ {solution.consumed_budget})",
+              f"Consumed Budget: {consumed_budget:>4}",
+              f"Elapsed Time: {elapsed_time:.3f}s")
+
+
+def construct_solution(instance, relaxation_threshold):
     """Builds an initial feasible solution."""
     task_list = sorted(instance.destinations,
                        key=lambda t: instance.task_risks[t],
                        reverse=True)
-    return Solution(instance, task_list, relaxation_threhsold)
+    return Solution(instance, task_list, relaxation_threshold)
 
 
 def cached_evaluate(f):
@@ -136,6 +153,7 @@ def cached_evaluate(f):
         _hash = hash(solution.task_list.tobytes())
         if _hash not in cache:
             cache[_hash] = f(solution, budget)
+        solution.objective = cache[_hash]
         return cache[_hash]
     return cached
 
@@ -143,8 +161,12 @@ def cached_evaluate(f):
 def budget_evaluate(solution, budget):
     """Decorator to keep track of the number of calls to the evaluation function."""
     budget.consumed += 1
-    solution.consumed_budget = budget.consumed
-    return earliest_finish_time(solution)
+    objective = earliest_finish_time(solution)
+    if solution.objective != objective:
+        # Avoids updating `consumed_budget` for solutins with same objective
+        solution.consumed_budget = budget.consumed
+        solution.objective = objective
+    return objective
 
 
 def earliest_finish_time(solution):
@@ -172,8 +194,7 @@ def earliest_finish_time(solution):
             #       See instance hx-n8-pu-ru-q4.
             if start_time < period:
                 start_time = period
-            finish_time = (start_time + c[node_id][task_id]
-                           + p[task_id])
+            finish_time = start_time + c[node_id][task_id] + p[task_id]
             if finish_time < ear_finish_time:
                 ear_finish_team, ear_start_time, ear_finish_time = (i,
                                                                     start_time,
@@ -192,9 +213,10 @@ def apply_perturbation(solution, perturbation_strength, rng):
     """Applies a random sequence of `swaps` to a solution (in place)."""
     nnodes = len(solution.task_list)
     nswaps = int(nnodes * perturbation_strength / 2)
-    for _ in range(nswaps):
+    while nswaps > 0:
         indexes = rng(low=0, high=nnodes, size=2)
-        solution.try_swap(indexes.min(), indexes.max())
+        if solution.try_swap(indexes.min(), indexes.max()):
+            nswaps -= 1
 
 
 def apply_local_search(solution, budget, evaluate):
@@ -213,7 +235,6 @@ def _try_improve_solution(solution, budget, evaluate):
     """Finds the first improving solution in the neighborhood."""
     current_objective = evaluate(solution, budget) # This shouldn't consume budget
                                                    # since it should be in the cache!
-    assert budget.can_evaluate()
     for i, j in _swap_indexes(len(solution.task_list)):
         if not budget.can_evaluate():
             break
@@ -232,30 +253,43 @@ if __name__ == "__main__":
                         help="relaxation threshold (in range [0, 1], default 0.0)")
     parser.add_argument("--perturbation", type=float, default=0.5,
                         help="perturbation strength (in range [0, 1], default 0.5)")
+    parser.add_argument("--evaluations", type=int, default=0,
+                        help="max number of evaluations calls (default number of tasks vs. 10000)")
     parser.add_argument("--no-setup-times", dest="setup-times", action="store_false",
                         help="Disable sequence-dependent setup times")
+    parser.add_argument("--tunning", dest="tunning", action="store_true",
+                        help="Activate the tunning mode (disable multiple runs)")
     parser.add_argument("--runs", type=int, default=35,
                         help="number of repetitions to perform (default 35)")
     parser.add_argument("--parallel", type=int, default=1,
                         help="number of parallel runs (default 1)")
     parser.add_argument("--seed", type=int, default=0,
                         help="seed for the random number generator (default 0)")
+    parser.add_argument("--profile", dest="profile", action="store_true",
+                        help="Disable sequence-dependent setup times")
     args = vars(parser.parse_args())
 
-    import cProfile
-    pr = cProfile.Profile()
-    x = time.time()
-    pr.enable()
-    solution = solve_instance(args["instance-path"],
-                              use_setup_times=args["setup-times"],
-                              relaxation_threshold=args["relaxation"],
-                              perturbation_strength=args["perturbation"],
-                              seed=args["seed"])
-    pr.disable()
-    print("Task list:", solution.task_list)
-    print("Start times:", solution.start_times)
-    print("Completion times:", solution.completion_times)
-    print(f"Objective = {earliest_finish_time(solution)}")
-    print(f"Budget = {solution.consumed_budget}")
-    print("Time = ", time.time() - x)
-    # pr.print_stats(sort='time')
+    if args["tunning"]:
+        solution, _, time = solve_instance(args["instance-path"],
+                                           use_setup_times=args["setup-times"],
+                                           relaxation_threshold=args["relaxation"],
+                                           perturbation_strength=args["perturbation"],
+                                           evaluations=args["evaluations"],
+                                           seed=args["seed"])
+        print(solution.objective, f"{time:.3f}")
+        quit()
+
+    if args["profile"]:
+        import cProfile
+        pr = cProfile.Profile()
+        pr.enable()
+
+    run_multiple(args["instance-path"],
+                 use_setup_times=args["setup-times"],
+                 relaxation_threshold=args["relaxation"],
+                 perturbation_strength=args["perturbation"],
+                 evaluations=args["evaluations"])
+
+    if args["profile"]:
+        pr.disable()
+        pr.print_stats(sort='time')
