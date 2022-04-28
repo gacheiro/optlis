@@ -256,9 +256,9 @@ def from_command_line():
     parser.add_argument("--evaluations", type=int, default=0,
                         help="max number of evaluations calls (default number of tasks vs. 10000)")
     parser.add_argument("--no-setup-times", dest="setup-times", action="store_false",
-                        help="Disable sequence-dependent setup times")
+                        help="disable sequence-dependent setup times")
     parser.add_argument("--tunning", dest="tunning", action="store_true",
-                        help="Activate the tunning mode (disable multiple runs)")
+                        help="activate the tunning mode (disable multiple runs)")
     parser.add_argument("--runs", type=int, default=35,
                         help="number of repetitions to perform (default 35)")
     parser.add_argument("--parallel", type=int, default=1,
@@ -266,7 +266,7 @@ def from_command_line():
     parser.add_argument("--seed", type=int, default=0,
                         help="seed for the random number generator (default 0)")
     parser.add_argument("--profile", dest="profile", action="store_true",
-                        help="Disable sequence-dependent setup times")
+                        help="disable sequence-dependent setup times")
     args = vars(parser.parse_args())
 
     if args["tunning"]:

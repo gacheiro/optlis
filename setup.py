@@ -15,7 +15,6 @@ setup(
     package_dir = {"":"src"},
     include_package_data=False,
     install_requires=[
-        "click>=7.1.2",
         "jupyter>=1.0.0",
         "matplotlib>=3.3.4",
         "networkx>=2.5",

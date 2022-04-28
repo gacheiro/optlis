@@ -1,6 +1,5 @@
 from itertools import cycle
 
-import click
 import numpy as np
 import networkx as nx
 
@@ -119,26 +118,6 @@ def hexagonal(size=(3, 3), nb_origins=1, p=1, q=1, r=0.5):
         G.nodes[i]["p"] = p
         G.nodes[i]["r"] = r
     return Graph(G)
-
-
-@click.command()
-@click.option("--size", type=(int, int), default=(3, 3),
-              help="The size of the grid (m, n).")
-@click.option("--norigins", default=1, help="The number of origins.")
-@click.option("-p", type=int, default=1,
-              help="The value of p attributes for each destination ex. -p 1.")
-@click.option("-q", type=int, default=1,
-              help="The range of q attributes for each origin ex. -q 1.")
-@click.option("-r", help="The value of r attributes for each destination ex. -r 0.5 "
-                    "or -r uniform (default)", default="uniform")
-@click.option("--path", help="The path to save the instance. If not provided, print the"
-                        "output to the stdout.")
-def generate(size, norigins, p, q, r, path):
-    if r == "uniform":
-        graph = grid_uniform(size, norigins, p, q)
-    else:
-        graph = grid(size, norigins, p, q, float(r))
-    export_instance(graph, path)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
+import argparse
 from pathlib import Path
 
 import pulp as plp
 import networkx as nx
-import click
 
 from instances import load_instance, export_solution
 
@@ -90,8 +90,8 @@ def make_prob(G, relaxation_threshold=0.0):
     return prob
 
 
-def run_instance(instance_path="", relaxation_threshold=0.0, use_setup_times=True,
-                 time_limit=None, log_path=None, sol_path=None):
+def solve_instance(instance_path, relaxation_threshold=0.0, use_setup_times=True,
+                   time_limit=None, log_path=None, sol_path=None):
     """Runs the model for an instance."""
     G = load_instance(instance_path, use_setup_times)
     prob = make_prob(G, relaxation_threshold)
@@ -141,45 +141,29 @@ def run_instance(instance_path="", relaxation_threshold=0.0, use_setup_times=Tru
                         instance_path, sol_path)
 
 
-@click.command()
-@click.argument("instance-path")
-@click.option("--relaxation", type=float, default=0.0,
-              help="Relaxation threshold for the priority rules.")
-@click.option("--no-setup-times", is_flag=True, default=False,
-              help="Disable sequence-dependent setup times.")
-@click.option("--time-limit", type=int,
-              help="The maximum time limit for the execution (in seconds).")
-@click.option("--log-path", type=click.Path(),
-              help="Path to write the execution log.")
-@click.option("--sol-path", type=click.Path(),
-              help="Path to write the solution.")
-def command_line(instance_path, relaxation=0.0, no_setup_times=False, time_limit=None,
-                 log_path=None, sol_path=None):
-    """Runs the model from command line.
+def from_command_line():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("instance-path", type=Path,
+                        help="problem instance path" )
+    parser.add_argument("--relaxation", type=float, default=0.0,
+                        help="relaxation threshold (in range [0, 1], default 0.0)")
+    parser.add_argument("--time-limit", type=int,
+                        help="maximum time limit for the execution (in seconds)")
+    parser.add_argument("--no-setup-times", dest="setup_times", action="store_false",
+                        help="disable sequence-dependent setup times")
+    parser.add_argument("--log-path", type=Path,
+                        help="path to write the execution log")
+    parser.add_argument("--sol-path", type=Path,
+                        help="path to write the solution")
+    args = vars(parser.parse_args())
 
-       USAGE:
-
-       python cplex.py [OPTIONS] INSTANCE_PATH
-
-       OPTIONS:
-
-       --help\n
-            show this message and exit\n
-       --relaxation[=THRESHOLD]\n
-            the threshold relaxation for the priority rules (in range [0, 1]).\n
-            Default is 0 (strict priority rule).\n
-       --no-setup-times\n
-            Disable sequence-dependent setup times\n
-       --time-limit[=LIMIT]\n
-            the maximum time limit for the execution (in seconds)\n
-       --log-path[=LOG_PATH]\n
-            path to write the execution log\n
-       --sol-path[=SOL_PATH]\n
-            path to write the solution variables\n
-    """
-    run_instance(instance_path, relaxation, not no_setup_times, time_limit,
-                 log_path, sol_path)
+    solve_instance(args["instance-path"],
+                   args["relaxation"],
+                   args["setup_times"],
+                   args["time_limit"],
+                   args["log_path"],
+                   args["sol_path"])
 
 
 if __name__ == "__main__":
-    command_line()
+    from_command_line()
