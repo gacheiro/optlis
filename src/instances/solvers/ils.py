@@ -112,7 +112,7 @@ def solve(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
                                                       0)
     apply_local_search(best_solution, budget, evaluate)
     # Optimization loop
-    while budget.can_evaluate() and it_without_improvements < 1:
+    while budget.can_evaluate() and it_without_improvements < 5:
         solution = best_solution.copy()
         apply_perturbation(solution, perturbation_strength,
                            rng=rng.integers)
