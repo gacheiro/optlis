@@ -1,4 +1,4 @@
-from instances import generate_instance
+from optlis import generate_instance
 
 
 def test_generate_instance():

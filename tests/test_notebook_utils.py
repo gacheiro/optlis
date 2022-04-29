@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from instances.notebook_utils import makespan, accumulated_risk
+from optlis.notebook_utils import makespan, accumulated_risk
 
 
 def test_makespan(example_solution):

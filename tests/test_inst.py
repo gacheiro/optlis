@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import networkx as nx
 
-from instances import load_instance, grid
+from optlis import load_instance, grid
 
 
 @pytest.mark.skip(reason="no way of currently testing this.")

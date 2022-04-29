@@ -1,12 +1,12 @@
 import argparse
 import time
-from pathlib import Path
 from dataclasses import dataclass
 
 import networkx as nx
 import numpy as np
 
-from instances import Graph, load_instance
+from optlis import Graph, load_instance
+from optlis.solvers import solver_parser
 
 # TODO: check the `can_swap` function
 #       implement the multiple runs and stats
@@ -246,27 +246,18 @@ def _try_improve_solution(solution, budget, evaluate):
 
 
 def from_command_line():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("instance-path", type=Path,
-                        help="problem instance path" )
-    parser.add_argument("--relaxation", type=float, default=0.0,
-                        help="relaxation threshold (in range [0, 1], default 0.0)")
-    parser.add_argument("--perturbation", type=float, default=0.5,
-                        help="perturbation strength (in range [0, 1], default 0.5)")
+    parser = argparse.ArgumentParser(parents=[solver_parser])
     parser.add_argument("--evaluations", type=int, default=0,
                         help="max number of evaluations calls (default number of tasks vs. 10000)")
-    parser.add_argument("--no-setup-times", dest="setup-times", action="store_false",
-                        help="disable sequence-dependent setup times")
-    parser.add_argument("--tunning", dest="tunning", action="store_true",
-                        help="activate the tunning mode (disable multiple runs)")
     parser.add_argument("--runs", type=int, default=35,
                         help="number of repetitions to perform (default 35)")
     parser.add_argument("--parallel", type=int, default=1,
                         help="number of parallel runs (default 1)")
     parser.add_argument("--seed", type=int, default=0,
                         help="seed for the random number generator (default 0)")
-    parser.add_argument("--profile", dest="profile", action="store_true",
-                        help="disable sequence-dependent setup times")
+    parser.add_argument("--tunning", dest="tunning", action="store_true",
+                        help="activate the tunning mode (disable multiple runs)")
+    parser.add_argument("--profile", dest="profile", action="store_true")
     args = vars(parser.parse_args())
 
     if args["tunning"]:
@@ -285,7 +276,7 @@ def from_command_line():
         pr.enable()
 
     run_multiple(args["instance-path"],
-                 use_setup_times=args["setup-times"],
+                 use_setup_times=args["setup_times"],
                  relaxation_threshold=args["relaxation"],
                  perturbation_strength=args["perturbation"],
                  evaluations=args["evaluations"])
@@ -293,7 +284,3 @@ def from_command_line():
     if args["profile"]:
         pr.disable()
         pr.print_stats(sort='time')
-
-
-if __name__ == "__main__":
-    from_command_line()

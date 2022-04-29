@@ -3,8 +3,8 @@ from io import StringIO
 
 import pytest
 
-from instances import load_instance, write_instance, import_solution
-from instances.utils import write_solution, decompose_makespan
+from optlis import load_instance, write_instance, import_solution
+from optlis.utils import write_solution, decompose_makespan
 
 
 def test_Graph():
@@ -13,6 +13,7 @@ def test_Graph():
     assert list(G.origins) == [0]
     assert list(G.destinations) == [1, 2, 3, 4, 5, 6, 7, 8]
     # Same time horizon as defined in the instance file
+    assert G.time_horizon == 56
     assert list(G.time_periods)[-1] == 55
     # We set G.time_horizon = None, now the time horizon is estimated
     # by a formula (see G.time_periods)

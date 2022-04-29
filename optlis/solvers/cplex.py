@@ -4,7 +4,8 @@ from pathlib import Path
 import pulp as plp
 import networkx as nx
 
-from instances import load_instance, export_solution
+from optlis import load_instance, export_solution
+from optlis.solvers import solver_parser
 
 
 def make_prob(G, relaxation_threshold=0.0):
@@ -142,19 +143,9 @@ def solve_instance(instance_path, relaxation_threshold=0.0, use_setup_times=True
 
 
 def from_command_line():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("instance-path", type=Path,
-                        help="problem instance path" )
-    parser.add_argument("--relaxation", type=float, default=0.0,
-                        help="relaxation threshold (in range [0, 1], default 0.0)")
+    parser = argparse.ArgumentParser(parents=[solver_parser])
     parser.add_argument("--time-limit", type=int,
                         help="maximum time limit for the execution (in seconds)")
-    parser.add_argument("--no-setup-times", dest="setup_times", action="store_false",
-                        help="disable sequence-dependent setup times")
-    parser.add_argument("--log-path", type=Path,
-                        help="path to write the execution log")
-    parser.add_argument("--sol-path", type=Path,
-                        help="path to write the solution")
     args = vars(parser.parse_args())
 
     solve_instance(args["instance-path"],

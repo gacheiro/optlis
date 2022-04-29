@@ -8,8 +8,8 @@ def hex_grid_instances(export_dir=""):
     """
     for rdist in ["uniform"]:
         for pdist in ["homogeneous", "uniform"]:
-            # Generates graphs with 9, 17, 33, 65, 129 nodes
-            for size in [(5, 1), (2, 9), (4, 11), (9, 11), (5, 41)]:
+            # Generates graphs with 9, 17, 33, 65 nodes (n-1 tasks)
+            for size in [(5, 1), (2, 9), (4, 11), (9, 11)]:
                 G = generate_instance(
                     size,
                     nb_origins=1,

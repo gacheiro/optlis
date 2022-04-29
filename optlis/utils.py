@@ -1,6 +1,5 @@
 import warnings
 from math import ceil
-from decimal import Decimal
 from functools import cached_property
 
 import networkx as nx
@@ -25,7 +24,7 @@ class Graph(nx.Graph):
         """Returns the list of destinations."""
         return [n for n in self.nodes if self.nodes[n]["type"] == 1]
 
-    @cached_property
+    @property
     def time_periods(self):
         """Returns a list of time periods from 0 to T - 1.
            The `G.time_horizon` attribute is used for T if it's not None.
@@ -68,7 +67,7 @@ class Graph(nx.Graph):
         node_risk_dict = nx.get_node_attributes(self, "r")
         for i, ri in node_risk_dict.items():
             for j, rj in node_risk_dict.items():
-                if (Decimal(ri) - Decimal(rj) > Decimal(p)
+                if (ri > rj + p
                     and i not in self.origins
                     and j not in self.origins):
                         yield (i, j)

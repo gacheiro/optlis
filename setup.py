@@ -1,18 +1,16 @@
 """"The package to manage instances for my research problem."""
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 setup(
-    name="instance",
+    name="optlis",
     version="0.1.dev",
-    author="Thiago Jobson",
+    author="Thiago J. Barbalho",
     description=__doc__,
-        packages = find_packages(
-        where = 'src',
-        include = ['instances',],
-    #    exclude = ['additional',]
-    ),
-    package_dir = {"":"src"},
+    packages = ["optlis"],
+    entry_points={
+        'console_scripts': ["optlis = optlis:main"],
+    },
     include_package_data=False,
     install_requires=[
         "jupyter>=1.0.0",
