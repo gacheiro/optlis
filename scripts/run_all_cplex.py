@@ -1,5 +1,5 @@
 from pathlib import Path
-from instances.solvers.cplex import run_instance
+from optlis.solvers.cplex import optimize
 
 # Configure this accordingly
 INSTANCE_DIRECTORY = Path("data/instances/hex/")
@@ -33,7 +33,7 @@ def run_all(relaxation, no_setup_times):
             sol_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(pr) / Path("sol")
                         / Path(f"{instance_name}.sol"))
 
-            run_instance(
+            optimize(
                 instance_path,
                 relaxation_threshold=relaxation,
                 no_setup_times=no_setup_times,

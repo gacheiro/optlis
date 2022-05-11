@@ -166,6 +166,16 @@ def export_solution(solution, instance_path, outfile_path):
     with open(outfile_path, "w") as outfile:
         write_solution(solution, instance_path, outfile)
 
+'''
+def export_results_csv(path, data={}):
+    import pandas as pd
+    df = pd.DataFrame(data)
+    try:
+        df = pd.concat([pd.read_csv(path), df], ignore_index=True)
+    except FileNotFoundError:
+        pass
+    df.to_csv(path)
+'''
 
 def decompose_makespan(G, solution):
     """Decomposes the makespan into travel time vs. processing time.
@@ -234,12 +244,3 @@ def get_overall_travel_time(G, solution):
 
     travel_time = sum(1 for t in time_slots.values() if t == "tr")
     print(travel_time)
-
-
-if __name__ == "__main__":
-    decompose_makespan(
-        load_instance("experiments-27-10/instances/hex/hx-n32-ph-q1-ru.dat"),
-        import_solution("experiments-27-10/routing/none/sol/hx-n32-ph-q1-ru.sol")
-    #    load_instance("data/instances/example.dat"),
-    #    import_solution("data/solutions/example.sol")
-    )

@@ -91,11 +91,10 @@ def make_prob(G, relaxation_threshold=0.0):
     return prob
 
 
-def solve_instance(instance_path, relaxation_threshold=0.0, use_setup_times=True,
-                   time_limit=None, log_path=None, sol_path=None):
+def optimize(instance, relaxation_threshold=0.0,
+             time_limit=None, log_path=None, sol_path=None):
     """Runs the model for an instance."""
-    G = load_instance(instance_path, use_setup_times)
-    prob = make_prob(G, relaxation_threshold)
+    prob = make_prob(instance, relaxation_threshold)
 
     # TODO: configure how the MILP are exported
     prob.writeLP("OverallStatickRisk.lp")
@@ -139,7 +138,7 @@ def solve_instance(instance_path, relaxation_threshold=0.0, use_setup_times=True
         sol_path = Path(sol_path)
         sol_path.parent.mkdir(parents=True, exist_ok=True)
         export_solution({v.name: v.varValue for v in prob.variables()},
-                        instance_path, sol_path)
+                        "", sol_path)
 
 
 def from_command_line():
@@ -148,12 +147,13 @@ def from_command_line():
                         help="maximum time limit for the execution (in seconds)")
     args = vars(parser.parse_args())
 
-    solve_instance(args["instance-path"],
-                   args["relaxation"],
-                   args["setup_times"],
-                   args["time_limit"],
-                   args["log_path"],
-                   args["sol_path"])
+    instance = load_instance(args["instance-path"],
+                             args["setup_times"])
+    optimize(instance,
+             args["relaxation"],
+             args["time_limit"],
+             args["log_path"],
+             args["sol_path"])
 
 
 if __name__ == "__main__":

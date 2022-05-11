@@ -1,5 +1,7 @@
 import argparse
 import time
+import statistics
+from multiprocessing import Pool
 from dataclasses import dataclass
 
 import networkx as nx
@@ -93,13 +95,8 @@ class Solution:
                         self.objective, self.consumed_budget)
 
 
-def solve_instance(instance_path, use_setup_times=True, **kwargs):
-    """Loads and solves a problem instance."""
-    return solve(load_instance(instance_path, use_setup_times), **kwargs)
-
-
-def solve(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
-          evaluations=None, seed=0):
+def ils(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
+        evaluations=None, seed=0):
     """ILS optimization loop to solve a problem instance."""
     evaluations = evaluations or len(instance.destinations)*1000
     initial_solution = construct_solution(instance, relaxation_threshold)
@@ -125,15 +122,48 @@ def solve(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
     return best_solution, budget.consumed, time.time() - start_time
 
 
-def run_multiple(instance_path, runs=5, **kwargs):
-    for run, seed in zip(range(runs), range(runs)):
-        solution, consumed_budget, elapsed_time = solve_instance(instance_path,
-                                                                 seed=seed,
-                                                                 **kwargs)
-        print(f"Run #{run} (Seed: {seed}) -",
-              f"Objective: {solution.objective:.3f} (@ {solution.consumed_budget})",
-              f"Consumed Budget: {consumed_budget:>4}",
-              f"Elapsed Time: {elapsed_time:.3f}s")
+def optimize(instance, runs=35, parallel=4, relaxation_threshold=0.0,
+             perturbation_strength=0.5, evaluations=None):
+    """Loads and optimizes a problem instance."""
+    results = []
+    with Pool(processes=parallel) as pool:
+        multiple_results = [
+            pool.apply_async(ils, (instance, relaxation_threshold,
+                                   perturbation_strength, evaluations,
+                                   seed)) for seed in range(runs)]
+
+        for i, res in enumerate(multiple_results):
+            solution, consumed_budget, elapsed_time = res.get()
+            print(f"Run #{i:>02} (Seed: {i:>02}) -",
+                  f"Objective: {solution.objective:.3f}",
+                  f"(@ {solution.consumed_budget:>5})",
+                  f"Consumed Budget: {consumed_budget:>4}",
+                  f"Elapsed Time: {elapsed_time:.3f}s")
+            results.append((solution, consumed_budget, elapsed_time))
+
+    return results
+
+
+def show_stats(results):
+    solutions = [r[0] for r in results]
+    objectives = [s.objective for s in solutions]
+    min_objective, mean_objective, stddev_objective = (min(objectives),
+                                                       statistics.fmean(objectives),
+                                                       statistics.stdev(objectives))
+    print(f"\nObjective - Min: {min_objective:.2f} Mean: {mean_objective:.2f} "
+          f"Std Dev: {stddev_objective:.2f}")
+    budgets = [s.consumed_budget for s in solutions]
+    min_budget, mean_budget, max_budget = (min(budgets),
+                                           statistics.mean(budgets),
+                                           max(budgets))
+    print(f"Budget - Min: {min_budget} Mean: {mean_budget:.2f} "
+          f"Max: {max_budget}")
+    elapsed_times = [r[2] for r in results]
+    min_time, mean_time, max_time = (min(elapsed_times),
+                                     statistics.mean(elapsed_times),
+                                     max(elapsed_times))
+    print(f"Time - Min: {min_time:.3f} Mean: {mean_time:.3f} "
+          f"Max: {max_time:.3f}")
 
 
 def construct_solution(instance, relaxation_threshold):
@@ -248,39 +278,35 @@ def _try_improve_solution(solution, budget, evaluate):
 def from_command_line():
     parser = argparse.ArgumentParser(parents=[solver_parser])
     parser.add_argument("--evaluations", type=int, default=0,
-                        help="max number of evaluations calls (default number of tasks vs. 10000)")
+                        help="max number of evaluation calls (default n vs. 10000)")
     parser.add_argument("--runs", type=int, default=35,
                         help="number of repetitions to perform (default 35)")
-    parser.add_argument("--parallel", type=int, default=1,
-                        help="number of parallel runs (default 1)")
+    parser.add_argument("--parallel", type=int, default=4,
+                        help="number of parallel processes to spawn (default 4)")
     parser.add_argument("--seed", type=int, default=0,
                         help="seed for the random number generator (default 0)")
     parser.add_argument("--tunning", dest="tunning", action="store_true",
                         help="activate the tunning mode (disable multiple runs)")
-    parser.add_argument("--profile", dest="profile", action="store_true")
     args = vars(parser.parse_args())
 
+    instance = load_instance(args["instance-path"], args["setup_times"])
+
     if args["tunning"]:
-        solution, _, time = solve_instance(args["instance-path"],
-                                           use_setup_times=args["setup-times"],
-                                           relaxation_threshold=args["relaxation"],
-                                           perturbation_strength=args["perturbation"],
-                                           evaluations=args["evaluations"],
-                                           seed=args["seed"])
-        print(solution.objective, f"{time:.3f}")
-        quit()
+        solution, _, time = ils(
+            instance,
+            relaxation_threshold=args["relaxation"],
+            perturbation_strength=args["perturbation"],
+            evaluations=args["evaluations"]
+        )
+        print(f"{solution.objective:.3f}", f"{time:.3f}")
 
-    if args["profile"]:
-        import cProfile
-        pr = cProfile.Profile()
-        pr.enable()
-
-    run_multiple(args["instance-path"],
-                 use_setup_times=args["setup_times"],
-                 relaxation_threshold=args["relaxation"],
-                 perturbation_strength=args["perturbation"],
-                 evaluations=args["evaluations"])
-
-    if args["profile"]:
-        pr.disable()
-        pr.print_stats(sort='time')
+    else:
+        res = optimize(
+            instance,
+            runs=args["runs"],
+            parallel=args["parallel"],
+            relaxation_threshold=args["relaxation"],
+            perturbation_strength=args["perturbation"],
+            evaluations=args["evaluations"]
+        )
+        show_stats(res)
