@@ -1,5 +1,7 @@
 from pathlib import Path
-from optlis.solvers.cplex import optimize
+
+from optlis import load_instance
+from optlis.solvers.cplex import model_1, model_2, optimize
 
 # Configure this accordingly
 INSTANCE_DIRECTORY = Path("data/instances/hex/")
@@ -7,13 +9,14 @@ OUTPUT_DIRECTORY = Path("experiments/")
 TIME_LIMIT = 14_400 # 4 hours time limit
 
 
-def run_all(relaxation, no_setup_times):
+def run_all(relaxation, use_setup_times):
     """Runs a bunch of instances in the benchmark."""
     for n in [8, 16, 32, 64]: #, 128]:
         for q in [2**i for i in range(0, 10) if 2**i <= n]:
 
             # Problem scneario (with or without setup times)
-            pscenario = "scheduling" if no_setup_times else "routing-scheduling"
+            pscenario = "routing-scheduling" if use_setup_times else "scheduling"
+            model = model_2 if use_setup_times else model_1
 
             # Priority rules (none, moderate, strict)
             if relaxation == 0:
@@ -33,10 +36,12 @@ def run_all(relaxation, no_setup_times):
             sol_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(pr) / Path("sol")
                         / Path(f"{instance_name}.sol"))
 
+            instance = load_instance(instance_path, use_setup_times)
+
             optimize(
-                instance_path,
+                instance=instance,
+                make_model=model,
                 relaxation_threshold=relaxation,
-                no_setup_times=no_setup_times,
                 time_limit=TIME_LIMIT,
                 log_path=log_path,
                 sol_path=sol_path
@@ -44,6 +49,6 @@ def run_all(relaxation, no_setup_times):
 
 
 if __name__ == "__main__":
-    for no_setup_times in [False, True]:
+    for use_setup_times in [True, False]:
         for relaxation in [0, 0.5, 1]:
-            run_all(relaxation, no_setup_times)
+            run_all(relaxation, use_setup_times)

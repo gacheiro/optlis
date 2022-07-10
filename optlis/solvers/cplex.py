@@ -8,7 +8,73 @@ from optlis import load_instance, export_solution
 from optlis.solvers import solver_parser
 
 
-def make_prob(G, relaxation_threshold=0.0):
+def model_1(G, relaxation_threshold=0.0):
+    # The set of 'jobs' to process
+    D = G.destinations
+    # The duration of each job
+    p = G.task_durations
+    # The risk at each destination
+    r = G.task_risks
+    # The number of wt at each origin
+    K = sum(nx.get_node_attributes(G, "q").values())
+    # The estimated amount of time periods to process all jobs (T is an upper bound)
+    # indexed from 1 to T
+    T = G.time_periods
+
+    # Creates the model's variables
+    overall_risk = plp.LpVariable("overall_risk", lowBound=0, cat=plp.LpContinuous)
+    x = plp.LpVariable.dicts("x", indexs=(D, T), cat=plp.LpBinary)
+    S = plp.LpVariable.dicts("S", indexs=D, lowBound=0, cat=plp.LpInteger)
+    C = plp.LpVariable.dicts("C", indexs=D, lowBound=0, cat=plp.LpInteger)
+    makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
+
+    # The objective function
+    prob = plp.LpProblem("Overall_Risk", plp.LpMinimize)
+    prob += overall_risk
+
+    # Calculates the overall risk
+    prob += overall_risk == plp.lpSum(r[i] * C[i] for i in D)
+
+    # Resource constraints
+    for t in T:
+        prob += (plp.lpSum([x[i][tau] for i in D
+                                      for tau in range(t - p[i] + 1, t+1)
+                                      if tau >= 0])
+                <= K,
+                f"Resource_constraint_at_period_{t}")
+
+    # Every destination has to be cleaned at some point
+    for i in D:
+        prob += plp.lpSum([x[i][t] for t in T]) == 1, f"Clean_destination_{i}"
+
+    """
+    # Precedence constraints
+    for i, j in G.dag(p=relaxation_threshold):
+        prob += (
+            plp.lpSum(t*x[i][t] for t in T) - plp.lpSum(t*x[j][t] for t in T) <= 0
+        ), f"R6_Start_cleaning_{i}_before_{j}"
+    """
+
+    # Precedence constraints
+    for i, j in G.dag(p=relaxation_threshold):
+        prob += S[i] <= S[j], f"Start_{i}_before_{j}"
+
+    # Calculates the start time of the cleaning at every node
+    for i in D:
+        prob += S[i] == plp.lpSum([t*x[i][t] for t in T]), f"Start_time_of_{i}"
+
+    # Calculates the completion time of every node
+    for i in D:
+        prob += C[i] == plp.lpSum((t + p[i]) * x[i][t] for t in T), f"Completion_time_of_{i}"
+
+    # Calculates the makespan
+    for i in D:
+        prob += makespan >= plp.lpSum((t+p[i])*x[i][t] for t in T), f"Cmax_geq_C_{i}"
+
+    return prob
+
+
+def model_2(G, relaxation_threshold=0.0):
     """Implements an integer programming model to minimize the overall risk."""
     V = G.nodes
     # The set of origins
@@ -91,10 +157,10 @@ def make_prob(G, relaxation_threshold=0.0):
     return prob
 
 
-def optimize(instance, relaxation_threshold=0.0,
+def optimize(instance, make_model, relaxation_threshold=0.0,
              time_limit=None, log_path=None, sol_path=None):
     """Runs the model for an instance."""
-    prob = make_prob(instance, relaxation_threshold)
+    prob = make_model(instance, relaxation_threshold)
 
     # TODO: configure how the MILP are exported
     prob.writeLP("OverallStatickRisk.lp")
@@ -149,7 +215,12 @@ def from_command_line():
 
     instance = load_instance(args["instance-path"],
                              args["setup_times"])
+
+    # Chooses models 1 or 2 based on the use of sequence-dependent setup times
+    make_model = model_2 if args["setup_times"] else model_1
+
     optimize(instance,
+             make_model,
              args["relaxation"],
              args["time_limit"],
              args["log_path"],
