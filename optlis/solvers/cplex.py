@@ -8,18 +8,19 @@ from optlis import load_instance, export_solution
 from optlis.solvers import solver_parser
 
 
-def model_1(G, relaxation_threshold=0.0):
-    # The set of 'jobs' to process
-    D = G.destinations
-    # The duration of each job
-    p = G.task_durations
+def model_1(instance, relaxation_threshold=0.0):
+    """Implements the RCPSP model to minimize the overall risk."""
+    # The set of tasks to process
+    D = instance.tasks
+    # The duration of each task
+    p = instance.task_durations
     # The risk at each destination
-    r = G.task_risks
-    # The number of wt at each origin
-    K = sum(nx.get_node_attributes(G, "q").values())
+    r = instance.task_risks
+    # The number of teams at each depot
+    K = sum(nx.get_node_attributes(instance, "q").values())
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
-    T = G.time_periods
+    T = instance.time_periods
 
     # Creates the model's variables
     overall_risk = plp.LpVariable("overall_risk", lowBound=0, cat=plp.LpContinuous)
@@ -41,57 +42,49 @@ def model_1(G, relaxation_threshold=0.0):
                                       for tau in range(t - p[i] + 1, t+1)
                                       if tau >= 0])
                 <= K,
-                f"Resource_constraint_at_period_{t}")
+                f"C1_Resource_constraint_at_period_{t}")
 
-    # Every destination has to be cleaned at some point
+    # Every task has to be processed at some point
     for i in D:
-        prob += plp.lpSum([x[i][t] for t in T]) == 1, f"Clean_destination_{i}"
-
-    """
-    # Precedence constraints
-    for i, j in G.dag(p=relaxation_threshold):
-        prob += (
-            plp.lpSum(t*x[i][t] for t in T) - plp.lpSum(t*x[j][t] for t in T) <= 0
-        ), f"R6_Start_cleaning_{i}_before_{j}"
-    """
+        prob += plp.lpSum([x[i][t] for t in T]) == 1, f"C2_Process_task_{i}"
 
     # Precedence constraints
-    for i, j in G.dag(p=relaxation_threshold):
-        prob += S[i] <= S[j], f"Start_{i}_before_{j}"
+    for i, j in instance.precedence(d=relaxation_threshold):
+        prob += S[i] <= S[j], f"C3_Prioritize_{i}_over_{j}"
 
-    # Calculates the start time of the cleaning at every node
+    # Calculates the start time of tasks
     for i in D:
-        prob += S[i] == plp.lpSum([t*x[i][t] for t in T]), f"Start_time_of_{i}"
+        prob += S[i] == plp.lpSum([t*x[i][t] for t in T]), f"C4_Start_{i}"
 
-    # Calculates the completion time of every node
+    # Calculates the completion times of tasks
     for i in D:
-        prob += C[i] == plp.lpSum((t + p[i]) * x[i][t] for t in T), f"Completion_time_of_{i}"
+        prob += C[i] == plp.lpSum((t + p[i]) * x[i][t] for t in T), f"C5_Completion_{i}"
 
-    # Calculates the makespan
+    # Calculates the project makespan
     for i in D:
-        prob += makespan >= plp.lpSum((t+p[i])*x[i][t] for t in T), f"Cmax_geq_C_{i}"
+        prob += makespan >= C[i], f"C6_Cmax_geq_C_{i}"
 
     return prob
 
 
-def model_2(G, relaxation_threshold=0.0):
-    """Implements an integer programming model to minimize the overall risk."""
-    V = G.nodes
-    # The set of origins
-    O = G.origins
-    # The set of 'jobs' to process
-    D = G.destinations
-    # The duration of each job
-    p = G.task_durations
+def model_2(instance, relaxation_threshold=0.0):
+    """Implements the RCPSP model with travel times to minimize the overall risk."""
+    V = instance.nodes
+    # The set of depots
+    O = instance.depots
+    # The set of tasks to process
+    D = instance.tasks
+    # The duration of each task
+    p = instance.task_durations
     # The risk at each destination
-    r = G.task_risks
-    # The distance between every pair of nodes
-    c = G.setup_times
-    # The number of wt at each origin
-    q = nx.get_node_attributes(G, "q")
+    r = instance.task_risks
+    # The sequence-dependent setup times
+    s = instance.setup_times
+    # The number of teams at each depot
+    q = nx.get_node_attributes(instance, "q")
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
-    T = G.time_periods
+    T = instance.time_periods
 
     # Creates the model's variables
     makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
@@ -107,52 +100,52 @@ def model_2(G, relaxation_threshold=0.0):
     # Calculates the overall risk
     prob += overall_risk == plp.lpSum(r[i] * cd[i] for i in D)
 
-    # Calculates the makespan
-    for j in D:
-        prob += makespan >= cd[j]
-
-    # Flow depart from origins
+    # Flow depart from depot
     for i in O:
         prob += (plp.lpSum(y[i][j][t] for t in T
                                       for j in D) <= q[i]
-        ), f"R1_Flow_depart_from_origin_{i}"
+        ), f"C1_Flow_depart_from_origin_{i}"
 
-    # Flow must enter every job
+    # Flow must enter every task
     for j in D:
         prob += (plp.lpSum(y[i][j][t] for t in T
                                       for i in V if i != j) == 1
-        ), f"R2_Enter_{j}"
+        ), f"C2_Enter_{j}"
 
-    # Flow must leave every job
+    # Flow must leave every task
     for j in D:
         prob += (plp.lpSum(y[j][i][t] for t in T
                                       for i in V if i != j) == 1
-        ), f"R3_Leave_{j}"
+        ), f"C3_Leave_{j}"
 
-    # Flow conservation constraints (allows idle times between jobs)
+    # Flow conservation constraints (allows idle times between consecutive tasks)
     for j in D:
         prob += (
             plp.lpSum(t * y[j][i][t] for i in V if i != j
                                      for t in T)
             - cd[j] >= 0
-        ), f"R4_Flow_conservation_{j}"
+        ), f"C4_Flow_conservation_{j}"
 
-    # Calculates the start time of every node
+    # Calculates the start times of tasks
     for j in D:
         prob += (sd[j] == plp.lpSum(t * y[i][j][t] for t in T
                                                    for i in V if i != j)
-        ), f"R5_Start_of_{j}"
+        ), f"C5_Start_{j}"
 
     # Precedence constraints
-    for i, j in G.dag(p=relaxation_threshold):
-        prob += sd[i] <= sd[j], f"R6_Start_{i}_before_{j}"
+    for i, j in instance.precedence(d=relaxation_threshold):
+        prob += sd[i] <= sd[j], f"C6_Start_{i}_before_{j}"
 
-    # Calculates the completion time of every node
+    # Calculates the completion times of tasks
     for j in D:
         prob += (
-            cd[j] == plp.lpSum((t + c[i][j]) * y[i][j][t] for t in T
+            cd[j] == plp.lpSum((t + s[i][j]) * y[i][j][t] for t in T
                                                           for i in V if i != j)
-                    + p[j]), f"R7_Completion_of_{j}"
+                    + p[j]), f"C7_Completion_{j}"
+
+    # Calculates the makespan
+    for j in D:
+        prob += makespan >= cd[j], f"C8_Cmax_geq_C_{j}"
 
     return prob
 

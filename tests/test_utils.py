@@ -9,19 +9,19 @@ from optlis.utils import _write_solution, _write_instance
 
 def test_Graph():
     """Tests the Graph class."""
-    G = load_instance(Path("data/instances/example.dat"))
-    assert list(G.origins) == [0]
-    assert list(G.destinations) == [1, 2, 3, 4, 5, 6, 7, 8]
+    inst = load_instance(Path("data/instances/example.dat"))
+    assert list(inst.depots) == [0]
+    assert list(inst.tasks) == [1, 2, 3, 4, 5, 6, 7, 8]
     # Same time horizon as defined in the instance file
-    assert G.time_horizon == 56
-    assert list(G.time_periods)[-1] == 55
+    assert inst.time_horizon == 56
+    assert list(inst.time_periods)[-1] == 55
     # We set G.time_horizon = None, now the time horizon is estimated
     # by a formula (see G.time_periods)
-    G.time_horizon = None
-    assert list(G.time_periods)[-1] == 75
+    inst.time_horizon = None
+    assert list(inst.time_periods)[-1] == 75
 
 
-@pytest.mark.parametrize(["p", "precedencies"], [
+@pytest.mark.parametrize(["d", "precedence"], [
   (0, [(8, 7), (8, 6), (8, 5), (8, 4), (8, 3), (8, 2), (8, 1),
        (7, 6), (7, 5), (7, 4), (7, 3), (7, 2), (7, 1),
        (6, 4), (6, 3), (6, 2), (6, 1),
@@ -40,24 +40,24 @@ def test_Graph():
          (6, 1),
          (5, 1)]),
   (1, [])])
-def test_Graph__dag(p, precedencies):
-    """Tests the dag generation with the relaxation threshold."""
-    G = load_instance(Path("data/instances/example.dat"))
-    assert set(G.dag(p=p)) == set(precedencies)
+def test_Graph__precedence(d, precedence):
+    """Tests the precedence generation with the relaxation threshold."""
+    inst = load_instance(Path("data/instances/example.dat"))
+    assert set(inst.precedence(d=d)) == set(precedence)
 
 
 def test_load_instance(instance_grid3x3_data):
     """Tests the function to load an instance from a file."""
-    G = load_instance(Path("data/instances/example.dat"))
-    assert list(G.nodes(data=True)) == instance_grid3x3_data[0]
-    assert set(G.edges) == set(instance_grid3x3_data[1])
+    inst = load_instance(Path("data/instances/example.dat"))
+    assert list(inst.nodes(data=True)) == instance_grid3x3_data[0]
+    assert set(inst.edges) == set(instance_grid3x3_data[1])
 
 
 def test_export_instance():
     """Tests the function to export a problem instance to a text file."""
-    G = load_instance(Path("data/instances/example.dat"))
+    inst = load_instance(Path("data/instances/example.dat"))
     outfile = StringIO()
-    _write_instance(G, outfile)
+    _write_instance(inst, outfile)
     outfile.seek(0)
     assert outfile.read() == "\n".join(("9",
                                         "0 0 0 1 0.0",

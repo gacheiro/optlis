@@ -2,7 +2,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from .utils import (Graph, load_instance, export_instance, import_solution,
+from .utils import (Instance, load_instance, export_instance, import_solution,
                     export_solution)
 from .generate import generate_instance
 

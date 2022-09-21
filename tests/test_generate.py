@@ -4,9 +4,9 @@ from optlis import generate_instance
 def test_generate_instance():
     """Tests the function to generate a problem instance."""
     # Generates an homogeneous risk hexagonal instance
-    G = generate_instance(size=(3, 2), nb_teams=1, seed=0)
-    assert G.origins == [0]
-    assert G.destinations == list(range(1, 8))
-    for i in G.destinations:
-        G.nodes[i]["r"] = 0.5
-    assert list(G.time_periods)[-1] == 30
+    inst = generate_instance(size=(3, 2), nb_teams=1, seed=0)
+    assert inst.depots == [0]
+    assert inst.tasks == list(range(1, 8))
+    for i in inst.tasks:
+        inst.nodes[i]["r"] = 0.5
+    assert list(inst.time_periods)[-1] == 30

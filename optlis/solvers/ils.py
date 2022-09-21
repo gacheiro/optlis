@@ -7,7 +7,7 @@ from dataclasses import dataclass
 import networkx as nx
 import numpy as np
 
-from optlis import Graph, load_instance
+from optlis import Instance, load_instance
 from optlis.solvers import solver_parser
 
 # TODO: check the `can_swap` function
@@ -25,7 +25,7 @@ class Budget:
 
 @dataclass
 class Solution:
-    instance: Graph
+    instance: Instance
     task_list: np.array
     relaxation_threshold: float
     # NOTE: this should be "private" since it is
@@ -95,55 +95,6 @@ class Solution:
                         self.objective, self.consumed_budget)
 
 
-def ils(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
-        evaluations=None, seed=0):
-    """ILS optimization loop to solve a problem instance."""
-    evaluations = evaluations or len(instance.destinations)*1000
-    initial_solution = construct_solution(instance, relaxation_threshold)
-    start_time = time.time()
-    rng = np.random.default_rng(seed)
-    # Applies a decorator to cache solutions and keep track of budget consumation
-    evaluate = cached_evaluate(budget_evaluate)
-    best_solution, budget, it_without_improvements = (initial_solution,
-                                                      Budget(max=evaluations),
-                                                      0)
-    apply_local_search(best_solution, budget, evaluate)
-    # Optimization loop
-    while budget.can_evaluate() and it_without_improvements < 10:
-        solution = best_solution.copy()
-        apply_perturbation(solution, perturbation_strength,
-                           rng=rng.integers)
-        apply_local_search(solution, budget, evaluate)
-        if evaluate(best_solution, budget) > evaluate(solution, budget):
-            best_solution = solution
-            it_without_improvements += 1
-        else:
-            it_without_improvements += 1
-    return best_solution, budget.consumed, time.time() - start_time
-
-
-def optimize(instance, runs=35, parallel=4, relaxation_threshold=0.0,
-             perturbation_strength=0.5, evaluations=None):
-    """Loads and optimizes a problem instance."""
-    results = []
-    with Pool(processes=parallel) as pool:
-        multiple_results = [
-            pool.apply_async(ils, (instance, relaxation_threshold,
-                                   perturbation_strength, evaluations,
-                                   seed)) for seed in range(runs)]
-
-        for i, res in enumerate(multiple_results):
-            solution, consumed_budget, elapsed_time = res.get()
-            print(f"Run #{i:>02} (Seed: {i:>02}) -",
-                  f"Objective: {solution.objective:.3f}",
-                  f"(@ {solution.consumed_budget:>5})",
-                  f"Consumed Budget: {consumed_budget:>4}",
-                  f"Elapsed Time: {elapsed_time:.3f}s")
-            results.append((solution, consumed_budget, elapsed_time))
-
-    return results
-
-
 def show_stats(results):
     solutions = [r[0] for r in results]
     objectives = [s.objective for s in solutions]
@@ -168,7 +119,7 @@ def show_stats(results):
 
 def construct_solution(instance, relaxation_threshold):
     """Builds an initial feasible solution."""
-    task_list = sorted(instance.destinations,
+    task_list = sorted(instance.tasks,
                        key=lambda t: instance.task_risks[t],
                        reverse=True)
     return Solution(instance, task_list, relaxation_threshold)
@@ -206,7 +157,7 @@ def earliest_finish_time(solution):
     """
     # Sets the initial location of teams to the depot (assumes depot is node 0).
     solution.teams.fill(0)
-    c, p = (solution.instance.setup_times,
+    s, p = (solution.instance.setup_times,
             solution.instance.task_durations)
 
     # Processes the list of tasks from head to tail.
@@ -224,7 +175,7 @@ def earliest_finish_time(solution):
             #       See instance hx-n8-pu-ru-q4.
             if start_time < period:
                 start_time = period
-            finish_time = start_time + c[node_id][task_id] + p[task_id]
+            finish_time = start_time + s[node_id][task_id] + p[task_id]
             if finish_time < ear_finish_time:
                 ear_finish_team, ear_start_time, ear_finish_time = (i,
                                                                     start_time,
@@ -273,6 +224,55 @@ def _try_improve_solution(solution, budget, evaluate):
                 return True
             solution.swap(i, j) # Not a better solution, undo last swap
     return False
+
+
+def ils(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
+        evaluations=None, seed=0):
+    """ILS optimization loop to solve a problem instance."""
+    evaluations = evaluations or len(instance.tasks)*1000
+    initial_solution = construct_solution(instance, relaxation_threshold)
+    start_time = time.time()
+    rng = np.random.default_rng(seed)
+    # Applies a decorator to cache solutions and keep track of budget consumation
+    evaluate = cached_evaluate(budget_evaluate)
+    best_solution, budget, it_without_improvements = (initial_solution,
+                                                      Budget(max=evaluations),
+                                                      0)
+    apply_local_search(best_solution, budget, evaluate)
+    # Optimization loop
+    while budget.can_evaluate() and it_without_improvements < 10:
+        solution = best_solution.copy()
+        apply_perturbation(solution, perturbation_strength,
+                           rng=rng.integers)
+        apply_local_search(solution, budget, evaluate)
+        if evaluate(best_solution, budget) > evaluate(solution, budget):
+            best_solution = solution
+            it_without_improvements += 1
+        else:
+            it_without_improvements += 1
+    return best_solution, budget.consumed, time.time() - start_time
+
+
+def optimize(instance, runs=35, parallel=4, relaxation_threshold=0.0,
+             perturbation_strength=0.5, evaluations=None):
+    """Loads and optimizes a problem instance."""
+    results = []
+    with Pool(processes=parallel) as pool:
+        multiple_results = [
+            pool.apply_async(ils, (instance, relaxation_threshold,
+                                   perturbation_strength, evaluations,
+                                   seed)) for seed in range(runs)]
+
+        for i, res in enumerate(multiple_results):
+            solution, consumed_budget, elapsed_time = res.get()
+            print(f"Run #{i:>02} (Seed: {i:>02}) -",
+                  f"Objective: {solution.objective:.3f}",
+                  f"(@ {solution.consumed_budget:>5})",
+                  f"Consumed Budget: {consumed_budget:>4}",
+                  f"Elapsed Time: {elapsed_time:.3f}s")
+            results.append((solution, consumed_budget, elapsed_time))
+
+    return results
 
 
 def from_command_line():

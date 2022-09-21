@@ -6,24 +6,21 @@ import networkx as nx
 import numpy as np
 
 
-# TODO: this should be called `Instance`
-class Graph(nx.Graph):
+class Instance(nx.Graph):
     """Subclass of nx.Graph class with some utility properties."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.time_horizon = None
 
-    # TODO: this should be called `depots`
     @cached_property
-    def origins(self):
+    def depots(self):
         """Returns the list of origins."""
         # Note: is there a better way to do this?
         return [n for n in self.nodes if self.nodes[n]["type"] == 0]
 
-    # TODO: this should be called `tasks`
     @cached_property
-    def destinations(self):
+    def tasks(self):
         """Returns the list of destinations."""
         return [n for n in self.nodes if self.nodes[n]["type"] == 1]
 
@@ -62,18 +59,19 @@ class Graph(nx.Graph):
         # NOTE: make this immutable
         return np.array([r for r in nx.get_node_attributes(self, "r").values()])
 
-    # TODO: `p` should be called `d`
-    def dag(self, p=0):
-        """Returns a Direct Acyclic Graph representing the
-           precedence constraints.
-           The `p` param is the relaxation threshold.
+    def precedence(self, d=0):
+        """Generates the set precedence for a given relaxation threshold in the form of
+           (i, j) tuples.
+
+           Note: use d = 0, 0.5 and 1 for the strict, moderate and none priority rules,
+                 respectively.
         """
         node_risk_dict = nx.get_node_attributes(self, "r")
         for i, ri in node_risk_dict.items():
             for j, rj in node_risk_dict.items():
-                if (ri > rj + p
-                    and i not in self.origins
-                    and j not in self.origins):
+                if (ri > rj + d
+                    and i not in self.depots
+                    and j not in self.depots):
                         yield (i, j)
 
 
@@ -97,19 +95,19 @@ def load_instance(path, use_setup_times=True):
             i, j = [int(u) for u in f.readline().split()]
             edges.append((i, j))
 
-        G = Graph()
-        G.add_nodes_from(nodes)
+        instance = Instance()
+        instance.add_nodes_from(nodes)
 
         # Enable or disable sequence-dependent setup times
         weight = 1 if use_setup_times else 0
-        G.add_edges_from(edges, weight=weight)
+        instance.add_edges_from(edges, weight=weight)
 
         try:
             T = int(f.readline())
-            G.time_horizon = T
+            instance.time_horizon = T
         except (EOFError, ValueError):
             warnings.warn("the instance file doesn't provide a time horizon")
-    return G
+    return instance
 
 
 def export_instance(G, outfile_path):

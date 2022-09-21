@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import networkx as nx
 
-from optlis.utils import Graph, export_instance
+from optlis.utils import Instance, export_instance
 
 
 def generate_instance(size=(1, 1), nb_teams=1, seed=0):
@@ -33,7 +33,7 @@ def generate_instance(size=(1, 1), nb_teams=1, seed=0):
         g.nodes[i]["r"] = r
         g.nodes[i]["p"] = p
 
-    return Graph(g)
+    return Instance(g)
 
 
 def generate_benchmark(export_dir="", seed=0):
