@@ -2,10 +2,9 @@ import sys
 import argparse
 from pathlib import Path
 
-from .utils import (Graph, load_instance, export_instance, write_instance,
-                    import_solution, export_solution, write_solution)
-from .generate import (grid, grid_uniform, hexagonal,
-                       generate_graph, generate_instance)
+from .utils import (Graph, load_instance, export_instance, import_solution,
+                    export_solution)
+from .generate import generate_instance
 
 
 def main():
@@ -26,7 +25,7 @@ def main():
     elif args["command"] == "ils":
         sys.argv.pop(1)
         ils.from_command_line()
-    
+
     elif args["command"] == "cplex":
         sys.argv.pop(1)
         cplex.from_command_line()

@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from optlis.notebook_utils import makespan, accumulated_risk
+from optlis.notebook_utils import makespan, overall_risk
 
 
 def test_makespan(example_solution):
@@ -10,9 +10,9 @@ def test_makespan(example_solution):
     assert makespan(example_solution) == 56
 
 
-def test_accumulated_risk(example_instance, example_solution):
+def test_overall_risk(example_instance, example_solution):
     """Tests the function to calculate the accumulated risk. Should be equal to
        weighted sum of completion dates.
     """
     assert math.isclose(
-        accumulated_risk(example_instance, example_solution), 85.2)
+        overall_risk(example_instance, example_solution), 85.2)

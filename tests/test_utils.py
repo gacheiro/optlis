@@ -3,8 +3,8 @@ from io import StringIO
 
 import pytest
 
-from optlis import load_instance, write_instance, import_solution
-from optlis.utils import write_solution, decompose_makespan
+from optlis import load_instance, import_solution
+from optlis.utils import _write_solution, _write_instance
 
 
 def test_Graph():
@@ -57,7 +57,7 @@ def test_export_instance():
     """Tests the function to export a problem instance to a text file."""
     G = load_instance(Path("data/instances/example.dat"))
     outfile = StringIO()
-    write_instance(G, outfile)
+    _write_instance(G, outfile)
     outfile.seek(0)
     assert outfile.read() == "\n".join(("9",
                                         "0 0 0 1 0.0",
@@ -131,7 +131,7 @@ def test_export_solution():
         "y_1_0_2": 1,
     }
     outfile = StringIO()
-    write_solution(solution, instance_path, outfile)
+    _write_solution(solution, instance_path, outfile)
     outfile.seek(0)
     # Ignores first line
     outfile.readline()
@@ -142,12 +142,3 @@ def test_export_solution():
                                         "sd_1 = 2",
                                         "y_0_1_1 = 1",
                                         "y_1_0_2 = 1\n"))
-
-
-def test_decompose_makespan():
-    """Tests the function to decompose the makespan into travel time
-       and processing time.
-    """
-    G = load_instance(Path("data/instances/example.dat"))
-    sol = import_solution("data/solutions/example.sol")
-    assert decompose_makespan(G, sol) == (15, 40)

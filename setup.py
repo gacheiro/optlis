@@ -1,4 +1,4 @@
-""""The package to manage instances for my research problem."""
+"""The optlis project implementation."""
 
 from setuptools import setup
 
