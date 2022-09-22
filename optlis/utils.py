@@ -113,7 +113,7 @@ def load_instance(path, use_setup_times=True):
 def export_instance(G, outfile_path):
     """"Exports a problem instance to a file."""
     with open(outfile_path, "w") as outfile:
-        write_instance(G, outfile)
+        _write_instance(G, outfile)
 
 
 def _write_instance(G, outfile):
@@ -161,7 +161,7 @@ def export_solution(solution, instance_path, outfile_path):
               variables with value 0 are ignored.
     """
     with open(outfile_path, "w") as outfile:
-        write_solution(solution, instance_path, outfile)
+        _write_solution(solution, instance_path, outfile)
 
 
 def _write_solution(solution, instance_path, outfile):

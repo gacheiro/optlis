@@ -10,30 +10,30 @@ TIME_LIMIT = 14_400 # 4 hours time limit
 
 
 def run_all(relaxation, use_setup_times):
-    """Runs a bunch of instances in the benchmark."""
+    """Runs CPLEX for every instance in the benchmark."""
     for n in [8, 16, 32, 64]: #, 128]:
         for q in [2**i for i in range(0, 10) if 2**i <= n]:
 
-            # Problem scneario (with or without setup times)
-            pscenario = "routing-scheduling" if use_setup_times else "scheduling"
+            # Problem scenario (with or without setup times)
+            pscenario = "scheduling-routing" if use_setup_times else "scheduling"
             model = model_2 if use_setup_times else model_1
 
             # Priority rules (none, moderate, strict)
             if relaxation == 0:
-                pr = "strict"
+                policy = "strict"
             elif relaxation == 1:
-                pr = "none"
+                policy = "none"
             else:
-                pr = "moderate"
+                policy = "moderate"
 
             instance_name = f"hx-n{n}-pu-ru-q{q}"
 
             instance_path = INSTANCE_DIRECTORY / Path(f"{instance_name}.dat")
 
-            log_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(pr) / Path("log")
+            log_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(policy) / Path("log")
                         / Path(f"{instance_name}.log"))
 
-            sol_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(pr) / Path("sol")
+            sol_path = (OUTPUT_DIRECTORY / Path(pscenario) / Path(policy) / Path("sol")
                         / Path(f"{instance_name}.sol"))
 
             instance = load_instance(instance_path, use_setup_times)

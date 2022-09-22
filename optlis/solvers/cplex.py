@@ -156,32 +156,17 @@ def optimize(instance, make_model, relaxation_threshold=0.0,
     prob = make_model(instance, relaxation_threshold)
 
     # TODO: configure how the MILP are exported
-    prob.writeLP("OverallStatickRisk.lp")
+    # prob.writeLP("OverallStatickRisk.lp")
 
     if log_path:
         log_path = Path(log_path)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    cplex_args = dict(
+    solver = plp.getSolver(
+        'CPLEX_PY',
         timeLimit=time_limit,
         logPath=log_path
     )
-
-    # Solves the problem with CPLEX (assumes CPLEX is availible)
-    try:
-        # Tries to disable PulP fixed mip re-optimization
-        # This needs to use fork https://github.com/thiagojobson/pulp
-        solver = plp.getSolver(
-            'CPLEX_CMD',
-            **cplex_args,
-            reoptimizeFixedMip=False,
-        )
-    except TypeError:
-        # In case the `reoptimizeFixedMip` flag is not supported (default PulP)
-        solver = plp.getSolver(
-            'CPLEX_CMD',
-            **cplex_args,
-        )
 
     prob.solve(solver)
     prob.roundSolution()
