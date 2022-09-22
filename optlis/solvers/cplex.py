@@ -89,8 +89,8 @@ def model_2(instance, relaxation_threshold=0.0):
     # Creates the model's variables
     makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
     overall_risk = plp.LpVariable("overall_risk", lowBound=0, cat=plp.LpContinuous)
-    sd = plp.LpVariable.dicts("sd", indexs=D, lowBound=0, cat=plp.LpInteger)
-    cd = plp.LpVariable.dicts("cd", indexs=D, lowBound=0, cat=plp.LpInteger)
+    S = plp.LpVariable.dicts("S", indexs=D, lowBound=0, cat=plp.LpInteger)
+    C = plp.LpVariable.dicts("C", indexs=D, lowBound=0, cat=plp.LpInteger)
     y = plp.LpVariable.dicts("y", indexs=(V, V, T), cat=plp.LpBinary)
 
     # The objective function
@@ -98,7 +98,7 @@ def model_2(instance, relaxation_threshold=0.0):
     prob += overall_risk
 
     # Calculates the overall risk
-    prob += overall_risk == plp.lpSum(r[i] * cd[i] for i in D)
+    prob += overall_risk == plp.lpSum(r[i] * C[i] for i in D)
 
     # Flow depart from depot
     for i in O:
@@ -123,29 +123,29 @@ def model_2(instance, relaxation_threshold=0.0):
         prob += (
             plp.lpSum(t * y[j][i][t] for i in V if i != j
                                      for t in T)
-            - cd[j] >= 0
+            - C[j] >= 0
         ), f"C4_Flow_conservation_{j}"
 
     # Calculates the start times of tasks
     for j in D:
-        prob += (sd[j] == plp.lpSum(t * y[i][j][t] for t in T
-                                                   for i in V if i != j)
+        prob += (S[j] == plp.lpSum(t * y[i][j][t] for t in T
+                                                  for i in V if i != j)
         ), f"C5_Start_{j}"
 
     # Precedence constraints
     for i, j in instance.precedence(d=relaxation_threshold):
-        prob += sd[i] <= sd[j], f"C6_Start_{i}_before_{j}"
+        prob += S[i] <= S[j], f"C6_Start_{i}_before_{j}"
 
     # Calculates the completion times of tasks
     for j in D:
         prob += (
-            cd[j] == plp.lpSum((t + s[i][j]) * y[i][j][t] for t in T
-                                                          for i in V if i != j)
+            C[j] == plp.lpSum((t + s[i][j]) * y[i][j][t] for t in T
+                                                         for i in V if i != j)
                     + p[j]), f"C7_Completion_{j}"
 
     # Calculates the makespan
     for j in D:
-        prob += makespan >= cd[j], f"C8_Cmax_geq_C_{j}"
+        prob += makespan >= C[j], f"C8_Cmax_geq_C_{j}"
 
     return prob
 
