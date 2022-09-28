@@ -24,9 +24,9 @@ def model_1(instance, relaxation_threshold=0.0):
 
     # Creates the model's variables
     overall_risk = plp.LpVariable("overall_risk", lowBound=0, cat=plp.LpContinuous)
-    x = plp.LpVariable.dicts("x", indexs=(D, T), cat=plp.LpBinary)
-    S = plp.LpVariable.dicts("S", indexs=D, lowBound=0, cat=plp.LpInteger)
-    C = plp.LpVariable.dicts("C", indexs=D, lowBound=0, cat=plp.LpInteger)
+    x = plp.LpVariable.dicts("x", indices=(D, T), cat=plp.LpBinary)
+    S = plp.LpVariable.dicts("S", indices=D, lowBound=0, cat=plp.LpInteger)
+    C = plp.LpVariable.dicts("C", indices=D, lowBound=0, cat=plp.LpInteger)
     makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
 
     # The objective function
@@ -89,9 +89,9 @@ def model_2(instance, relaxation_threshold=0.0):
     # Creates the model's variables
     makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
     overall_risk = plp.LpVariable("overall_risk", lowBound=0, cat=plp.LpContinuous)
-    S = plp.LpVariable.dicts("S", indexs=D, lowBound=0, cat=plp.LpInteger)
-    C = plp.LpVariable.dicts("C", indexs=D, lowBound=0, cat=plp.LpInteger)
-    y = plp.LpVariable.dicts("y", indexs=(V, V, T), cat=plp.LpBinary)
+    S = plp.LpVariable.dicts("S", indices=D, lowBound=0, cat=plp.LpInteger)
+    C = plp.LpVariable.dicts("C", indices=D, lowBound=0, cat=plp.LpInteger)
+    y = plp.LpVariable.dicts("y", indices=(V, V, T), cat=plp.LpBinary)
 
     # The objective function
     prob = plp.LpProblem("Overall_Risk", plp.LpMinimize)
