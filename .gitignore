@@ -1,5 +1,10 @@
 experiments/
 
+# irace
+*.stderr
+*.stdout
+*.Rdata
+
 # Dev
 .vscode
 *.lp
