@@ -12,6 +12,12 @@ Once you are inside the project folder, start by building the C code:
 make
 ```
 
+And export the `lib` directory as a environment variable using the absolute path:
+
+```bash
+export OPTLIS_LIB=path/to/optlis/lib
+```
+
 It is highly recommended to install this package inside a [virtual environment](https://www.geeksforgeeks.org/python-virtual-environment/).
 
 Once you have downloaded or cloned the repository, install it by using (make sure you are inside a virtual environment if you opted to use it):
