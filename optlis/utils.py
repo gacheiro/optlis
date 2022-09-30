@@ -8,7 +8,6 @@ import numpy as np
 from optlis.solvers.ctypes import (c_instance, c_int32, c_size_t, c_double,
                                    POINTER)
 
-# TODO: returning lists should be replaced by np.arrays (consider read only)
 class Instance(nx.Graph):
     """Subclass of nx.Graph class with some utility properties."""
 
@@ -61,15 +60,18 @@ class Instance(nx.Graph):
                 s[i][j] = s_dict[i][j]
         return s
 
-    # NOTE: this should be called `node_duration`
     @cached_property
-    def task_durations(self):
+    def node_resources(self):
+        return np.array([p for p in nx.get_node_attributes(self, "q").values()],
+                        dtype=np.int32)
+
+    @cached_property
+    def node_durations(self):
         return np.array([p for p in nx.get_node_attributes(self, "p").values()],
                         dtype=np.int32)
 
-    # NOTE: this should be called `node_risk` make this immutable
     @cached_property
-    def task_risks(self):
+    def node_risks(self):
         return np.array([r for r in nx.get_node_attributes(self, "r").values()],
                         dtype=np.float64)
 
@@ -89,14 +91,13 @@ class Instance(nx.Graph):
                         yield (i, j)
 
     def c_struct(self):
-        nresources = sum(nx.get_node_attributes(self, "q").values())
         return c_instance(
             c_size_t(len(self.nodes)),
             c_size_t(len(self.tasks)),
-            c_size_t(nresources),
+            c_size_t(sum(self.node_resources)),
             self.tasks.ctypes.data_as(POINTER(c_int32)),
-            self.task_durations.ctypes.data_as(POINTER(c_int32)),
-            self.task_risks.ctypes.data_as(POINTER(c_double)),
+            self.node_durations.ctypes.data_as(POINTER(c_int32)),
+            self.node_risks.ctypes.data_as(POINTER(c_double)),
             self.setup_times.ctypes.data_as(POINTER(c_int32)))
 
 

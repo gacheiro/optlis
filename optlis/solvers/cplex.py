@@ -13,11 +13,11 @@ def model_1(instance, relaxation_threshold=0.0):
     # The set of tasks to process
     D = instance.tasks
     # The duration of each task
-    p = instance.task_durations
+    p = instance.node_durations
     # The risk at each destination
-    r = instance.task_risks
+    r = instance.node_risks
     # The number of teams at each depot
-    K = sum(nx.get_node_attributes(instance, "q").values())
+    K = sum(instance.node_resources)
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
     T = instance.time_periods
@@ -75,13 +75,13 @@ def model_2(instance, relaxation_threshold=0.0):
     # The set of tasks to process
     D = instance.tasks
     # The duration of each task
-    p = instance.task_durations
+    p = instance.node_durations
     # The risk at each destination
-    r = instance.task_risks
+    r = instance.node_risks
     # The sequence-dependent setup times
     s = instance.setup_times
     # The number of teams at each depot
-    q = nx.get_node_attributes(instance, "q")
+    q = instance.node_resources
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
     T = instance.time_periods

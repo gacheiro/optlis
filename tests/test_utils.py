@@ -2,6 +2,7 @@ from pathlib import Path
 from io import StringIO
 
 import pytest
+import numpy as np
 
 from optlis import load_instance, import_solution
 from optlis.utils import _write_solution, _write_instance
@@ -10,8 +11,8 @@ from optlis.utils import _write_solution, _write_instance
 def test_Graph():
     """Tests the Graph class."""
     inst = load_instance(Path("data/instances/example.dat"))
-    assert list(inst.depots) == [0]
-    assert list(inst.tasks) == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert np.array_equal(inst.depots, np.array([0]))
+    assert np.array_equal(inst.tasks, np.array([1, 2, 3, 4, 5, 6, 7, 8]))
     # Same time horizon as defined in the instance file
     assert inst.time_horizon == 56
     assert list(inst.time_periods)[-1] == 55

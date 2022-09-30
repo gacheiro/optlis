@@ -62,7 +62,7 @@ class Solution:
             self.finish_times = np.array(finish_times, dtype=np.int32)
 
         # Save this to avoid extra computations
-        risks = instance.task_risks
+        risks = instance.node_risks
         self.task_risks = np.array([risks[i] for i in task_list]) # TODO: documment this
 
 
@@ -137,7 +137,7 @@ def show_stats(results):
 def construct_solution(instance, relaxation_threshold):
     """Builds an initial feasible solution."""
     task_list = sorted(instance.tasks,
-                       key=lambda t: instance.task_risks[t],
+                       key=lambda t: instance.node_risks[t],
                        reverse=True)
     return Solution(instance, task_list, relaxation_threshold)
 
