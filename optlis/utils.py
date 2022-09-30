@@ -5,7 +5,10 @@ from functools import cached_property
 import networkx as nx
 import numpy as np
 
+from optlis.solvers.ctypes import (c_instance, c_int32, c_size_t, c_double,
+                                   POINTER)
 
+# TODO: returning lists should be replaced by np.arrays (consider read only)
 class Instance(nx.Graph):
     """Subclass of nx.Graph class with some utility properties."""
 
@@ -15,14 +18,15 @@ class Instance(nx.Graph):
 
     @cached_property
     def depots(self):
-        """Returns the list of origins."""
-        # Note: is there a better way to do this?
-        return [n for n in self.nodes if self.nodes[n]["type"] == 0]
+        """Returns the list of depots."""
+        return np.array([n for n in self.nodes if self.nodes[n]["type"] == 0],
+                        dtype=np.int32)
 
     @cached_property
     def tasks(self):
-        """Returns the list of destinations."""
-        return [n for n in self.nodes if self.nodes[n]["type"] == 1]
+        """Returns the list of tasks."""
+        return np.array([n for n in self.nodes if self.nodes[n]["type"] == 1],
+                        dtype=np.int32)
 
     @property
     def time_periods(self):
@@ -48,16 +52,26 @@ class Instance(nx.Graph):
 
     @cached_property
     def setup_times(self):
-        return dict(nx.shortest_path_length(self, weight="weight"))
+        """Returns the sequence-dependent setup times."""
+        s_dict = dict(nx.shortest_path_length(self, weight="weight"))
+        nnodes = len(self.nodes())
+        s = np.zeros((nnodes, nnodes), dtype=np.int32)
+        for i in self.nodes():
+            for j in self.nodes():
+                s[i][j] = s_dict[i][j]
+        return s
 
+    # NOTE: this should be called `node_duration`
     @cached_property
     def task_durations(self):
-        return nx.get_node_attributes(self, "p")
+        return np.array([p for p in nx.get_node_attributes(self, "p").values()],
+                        dtype=np.int32)
 
+    # NOTE: this should be called `node_risk` make this immutable
     @cached_property
     def task_risks(self):
-        # NOTE: make this immutable
-        return np.array([r for r in nx.get_node_attributes(self, "r").values()])
+        return np.array([r for r in nx.get_node_attributes(self, "r").values()],
+                        dtype=np.float64)
 
     def precedence(self, d=0):
         """Generates the set precedence for a given relaxation threshold in the form of
@@ -73,6 +87,17 @@ class Instance(nx.Graph):
                     and i not in self.depots
                     and j not in self.depots):
                         yield (i, j)
+
+    def c_struct(self):
+        nresources = sum(nx.get_node_attributes(self, "q").values())
+        return c_instance(
+            c_size_t(len(self.nodes)),
+            c_size_t(len(self.tasks)),
+            c_size_t(nresources),
+            self.tasks.ctypes.data_as(POINTER(c_int32)),
+            self.task_durations.ctypes.data_as(POINTER(c_int32)),
+            self.task_risks.ctypes.data_as(POINTER(c_double)),
+            self.setup_times.ctypes.data_as(POINTER(c_int32)))
 
 
 def load_instance(path, use_setup_times=True):
