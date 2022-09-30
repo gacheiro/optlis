@@ -1,6 +1,7 @@
 import argparse
 import time
 import statistics
+import functools
 from multiprocessing import Pool
 from dataclasses import dataclass
 
@@ -10,8 +11,10 @@ import numpy as np
 from optlis import Instance, load_instance
 from optlis.solvers import solver_parser
 
-# TODO: check the `can_swap` function
-#       implement the multiple runs and stats
+from optlis.solvers.ctypes import (c_solution, c_budget, c_int32, c_size_t, c_double,
+                                   POINTER)
+from optlis.solvers.localsearch import local_search
+
 
 @dataclass
 class Budget:
@@ -22,6 +25,10 @@ class Budget:
     def can_evaluate(self):
         return self.consumed < self.max
 
+    def c_struct(self):
+        return c_budget(c_int32(self.max),
+                        c_int32(self.consumed))
+
 
 @dataclass
 class Solution:
@@ -31,35 +38,33 @@ class Solution:
     # NOTE: this should be "private" since it is
     # not always in sync with `objective` (cache limitation).
     start_times: np.array
-    completion_times: np.array
+    finish_times: np.array
     ####
-    objective: float = -1
-    consumed_budget: int = -1
+    objective: float = float("inf")
+    consumed_budget: int = 1
 
     def __init__(self, instance, task_list, relaxation_threshold=0,
-                 start_times=None, completion_times=None,
-                 objective=-1, consumed_budget=-1):
+                 start_times=None, finish_times=None,
+                 objective=float("inf"), consumed_budget=1):
 
-        self.instance, self.task_list, self.relaxation_threshold = (instance,
-                                                                    np.array(task_list),
-                                                                    relaxation_threshold)
-        self.objective, self.consumed_budget = objective, consumed_budget
+        self.instance = instance
+        self.task_list = np.array(task_list, dtype=np.int32)
+        self.relaxation_threshold = relaxation_threshold
+        self.objective = objective
+        self.consumed_budget = consumed_budget # TODO: rename this attr
 
-        if start_times is None or completion_times is None:
+        if start_times is None or finish_times is None:
             nnodes = len(self.instance.nodes())
-            self.start_times, self.completion_times = (np.zeros(nnodes, dtype=int),
-                                                       np.zeros(nnodes, dtype=int))
+            self.start_times = np.zeros(nnodes, dtype=np.int32)
+            self.finish_times = np.zeros(nnodes, dtype=np.int32)
         else:
-            self.start_times, self.completion_times = (np.array(start_times),
-                                                       np.array(completion_times))
+            self.start_times = np.array(start_times, dtype=np.int32)
+            self.finish_times = np.array(finish_times, dtype=np.int32)
 
         # Save this to avoid extra computations
         risks = instance.task_risks
-        self._risks = np.array([risks[i] for i in task_list])
-        # The number of teams at each node
-        q = nx.get_node_attributes(instance, "q")
-        # Assigns the initial position of each team to the depot (assumes depot is node 0)
-        self.teams = np.zeros(sum(q.values()), dtype=int)
+        self.task_risks = np.array([risks[i] for i in task_list]) # TODO: documment this
+
 
     def can_swap(self, i, j):
         """"Returns True if tasks at indices i and j can be swapped."""
@@ -69,8 +74,8 @@ class Solution:
             return False
         # f = lambda k: self._risks[k] <= self._risks[j] + self.relaxation_threshold
         # return all(f(k) for k in range(i, j))
-        return (self._risks[i:j+1].max() <= self._risks[i:j+1].min()
-                                            + self.relaxation_threshold)
+        return (self.task_risks[i:j+1].max() <= self.task_risks[i:j+1].min()
+                                                + self.relaxation_threshold)
 
     def try_swap(self, i, j):
         """Tries to swap tasks at indices i and j (if allowed).
@@ -86,13 +91,25 @@ class Solution:
         self.task_list[i], self.task_list[j] = (self.task_list[j],
                                                 self.task_list[i])
         # Also swaps the risk array, they match the indices
-        self._risks[i], self._risks[j] = (self._risks[j],
-                                          self._risks[i])
+        self.task_risks[i], self.task_risks[j] = (self.task_risks[j],
+                                                  self.task_risks[i])
 
     def copy(self):
         return Solution(self.instance, self.task_list, self.relaxation_threshold,
-                        self.start_times, self.completion_times,
+                        self.start_times, self.finish_times,
                         self.objective, self.consumed_budget)
+
+    def c_struct(self):
+        return c_solution(
+            c_size_t(len(self.task_list)),
+            self.task_list.ctypes.data_as(POINTER(c_int32)),
+            self.task_risks.ctypes.data_as(POINTER(c_double)),
+            c_double(self.objective),
+            self.start_times.ctypes.data_as(POINTER(c_int32)),
+            self.finish_times.ctypes.data_as(POINTER(c_int32)),
+            c_int32(self.consumed_budget),
+            c_double(self.relaxation_threshold)
+        )
 
 
 def show_stats(results):
@@ -125,72 +142,7 @@ def construct_solution(instance, relaxation_threshold):
     return Solution(instance, task_list, relaxation_threshold)
 
 
-def cached_evaluate(f):
-    """Decorator to cache solutions' objetive.
-       This avoids solutions to be evaluated more than once.
-    """
-    cache = {}
-    def cached(solution, budget):
-        _hash = hash(solution.task_list.tobytes())
-        if _hash not in cache:
-            cache[_hash] = f(solution, budget)
-        solution.objective = cache[_hash]
-        return cache[_hash]
-    return cached
-
-
-def budget_evaluate(solution, budget):
-    """Decorator to keep track of the number of calls to the evaluation function."""
-    budget.consumed += 1
-    objective = earliest_finish_time(solution)
-    if solution.objective != objective:
-        # Avoids updating `consumed_budget` for solutins with same objective
-        solution.consumed_budget = budget.consumed
-        solution.objective = objective
-    return objective
-
-
-def earliest_finish_time(solution):
-    """Applies the `earliest finish time` rule to a given list of tasks.
-       The `start_times` and `completion_times` arrays are updated with values
-       calculted by the heuristic.
-    """
-    # Sets the initial location of teams to the depot (assumes depot is node 0).
-    solution.teams.fill(0)
-    s, p = (solution.instance.setup_times,
-            solution.instance.task_durations)
-
-    # Processes the list of tasks from head to tail.
-    # If more than one resource is available at a given time
-    # chooses the one that yields the earliest finish time.
-    period = 0
-    for task_id in solution.task_list:
-        ear_finish_team, ear_finish_time = (None,
-                                            float('inf'))
-        for i, node_id in enumerate(solution.teams):
-            start_time = solution.completion_times[node_id]
-            # TODO: well documment this.
-            #       Avoids a team can "travel back in time".
-            #       Without this, priority rules may not be respected.
-            #       See instance hx-n8-pu-ru-q4.
-            if start_time < period:
-                start_time = period
-            finish_time = start_time + s[node_id][task_id] + p[task_id]
-            if finish_time < ear_finish_time:
-                ear_finish_team, ear_start_time, ear_finish_time = (i,
-                                                                    start_time,
-                                                                    finish_time)
-        solution.start_times[task_id] = ear_start_time
-        solution.completion_times[task_id] = ear_finish_time
-        solution.teams[ear_finish_team] = task_id
-
-        if solution.start_times[task_id] > period:
-            period = solution.start_times[task_id]
-
-    return np.sum(solution.instance.task_risks * solution.completion_times)
-
-
-def apply_perturbation(solution, perturbation_strength, rng):
+def perturbate(solution, perturbation_strength, rng):
     """Applies a random sequence of `swaps` to a solution (in place)."""
     nnodes = len(solution.task_list)
     nswaps = int(nnodes * perturbation_strength / 2)
@@ -200,62 +152,34 @@ def apply_perturbation(solution, perturbation_strength, rng):
             nswaps -= 1
 
 
-def apply_local_search(solution, budget, evaluate):
-    """Applies local search to a solution (in place)."""
-    while _try_improve_solution(solution, budget, evaluate):
-        continue
-
-
-def _swap_indexes(n):
-    for i in range(n):
-        for j in range(i+1, n):
-            yield i, j
-
-
-def _try_improve_solution(solution, budget, evaluate):
-    """Finds the first improving solution in the neighborhood."""
-    current_objective = evaluate(solution, budget) # This shouldn't consume budget
-                                                   # since it should be in the cache!
-    for i, j in _swap_indexes(len(solution.task_list)):
-        if not budget.can_evaluate():
-            break
-        elif solution.try_swap(i, j):
-            if current_objective > evaluate(solution, budget): # This may consume the budget
-                return True
-            solution.swap(i, j) # Not a better solution, undo last swap
-    return False
-
-
 def ils(instance, relaxation_threshold=0.0, perturbation_strength=0.5,
         evaluations=None, seed=0):
-    """ILS optimization loop to solve a problem instance."""
-    evaluations = evaluations or len(instance.tasks)*1000
+    """Runs ILS optimization loop."""
     initial_solution = construct_solution(instance, relaxation_threshold)
     start_time = time.time()
     rng = np.random.default_rng(seed)
-    # Applies a decorator to cache solutions and keep track of budget consumation
-    evaluate = cached_evaluate(budget_evaluate)
-    best_solution, budget, it_without_improvements = (initial_solution,
-                                                      Budget(max=evaluations),
-                                                      0)
-    apply_local_search(best_solution, budget, evaluate)
-    # Optimization loop
+
+    evaluations = evaluations or len(instance.tasks)*10_000
+    current_solution = initial_solution
+    budget = Budget(max=evaluations)
+    local_search(current_solution, budget)
+
+    it_without_improvements = 0
     while budget.can_evaluate() and it_without_improvements < 10:
-        solution = best_solution.copy()
-        apply_perturbation(solution, perturbation_strength,
-                           rng=rng.integers)
-        apply_local_search(solution, budget, evaluate)
-        if evaluate(best_solution, budget) > evaluate(solution, budget):
-            best_solution = solution
-            it_without_improvements += 1
+        solution = current_solution.copy()
+        perturbate(solution, perturbation_strength, rng=rng.integers)
+        local_search(solution, budget)
+        if solution.objective < current_solution.objective:
+            current_solution = solution
+            it_without_improvements = 0
         else:
             it_without_improvements += 1
-    return best_solution, budget.consumed, time.time() - start_time
+    return current_solution, budget.consumed, time.time() - start_time
 
 
 def optimize(instance, runs=35, parallel=4, relaxation_threshold=0.0,
              perturbation_strength=0.5, evaluations=None):
-    """Loads and optimizes a problem instance."""
+    """Loads and optimizes a problem instance. Uses multiple processes."""
     results = []
     with Pool(processes=parallel) as pool:
         multiple_results = [
@@ -292,13 +216,16 @@ def from_command_line():
     instance = load_instance(args["instance-path"], args["setup_times"])
 
     if args["tunning"]:
-        solution, _, time = ils(
-            instance,
-            relaxation_threshold=args["relaxation"],
-            perturbation_strength=args["perturbation"],
-            evaluations=args["evaluations"],
-            seed=args["seed"]
-        )
+        import cProfile
+        with cProfile.Profile() as pr:
+            solution, _, time = ils(
+                instance,
+                relaxation_threshold=args["relaxation"],
+                perturbation_strength=args["perturbation"],
+                evaluations=args["evaluations"],
+                seed=args["seed"]
+            )
+        pr.print_stats("tottime")
         print(f"{solution.objective:.3f}", f"{time:.3f}")
 
     else:
