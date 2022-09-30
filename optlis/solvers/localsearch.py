@@ -1,6 +1,8 @@
+import os
+from pathlib import Path
 from ctypes import cdll, byref
 
-_lib = cdll.LoadLibrary('lib/localsearch.so')
+_lib = cdll.LoadLibrary(Path(os.environ.get("OPTLIS_LIB")) / 'localsearch.so')
 
 
 def earliest_finish_time(solution):
