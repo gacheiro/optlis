@@ -16,7 +16,7 @@ def model_1(instance, relaxation_threshold=0.0):
     p = instance.node_durations
     # The risk at each destination
     r = instance.node_risks
-    # The number of teams at each depot
+    # The number of teams at the depot
     K = sum(instance.node_resources)
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
@@ -80,8 +80,8 @@ def model_2(instance, relaxation_threshold=0.0):
     r = instance.node_risks
     # The sequence-dependent setup times
     s = instance.setup_times
-    # The number of teams at each depot
-    q = instance.node_resources
+    # The number of teams at each node (it should be one depot node)
+    k = instance.node_resources
     # The estimated amount of time periods to process all jobs (T is an upper bound)
     # indexed from 1 to T
     T = instance.time_periods
@@ -103,7 +103,7 @@ def model_2(instance, relaxation_threshold=0.0):
     # Flow depart from depot
     for i in O:
         prob += (plp.lpSum(y[i][j][t] for t in T
-                                      for j in D) <= q[i]
+                                      for j in D) <= k[i]
         ), f"C1_Flow_depart_from_origin_{i}"
 
     # Flow must enter every task
@@ -168,7 +168,8 @@ def optimize(instance, make_model, relaxation_threshold=0.0,
         logPath=log_path
     )
 
-    prob.solve(solver)
+    status = prob.solve(solver)
+    print("Status:", plp.LpStatus.get(prob.status))
     prob.roundSolution()
 
     # Prints variables with it's resolved optimum value
@@ -183,6 +184,8 @@ def optimize(instance, make_model, relaxation_threshold=0.0,
         sol_path.parent.mkdir(parents=True, exist_ok=True)
         export_solution({v.name: v.varValue for v in prob.variables()},
                         "", sol_path)
+
+    return prob.status, prob.variables()
 
 
 def from_command_line():

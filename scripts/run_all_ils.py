@@ -1,15 +1,8 @@
+import argparse
 from pathlib import Path
-
-from matplotlib.style import use
 
 from optlis import load_instance
 from optlis.solvers.ils import optimize, show_stats
-
-# Configure this accordingly
-INSTANCE_DIRECTORY = Path("data/instances/hex/")
-OUTPUT_DIRECTORY = Path("experiments/ils/")
-RUNS = 35
-PARALLEL_RUNS = 8
 
 
 def get_perturbation_config(pscenario, relaxation_threshold):
@@ -29,9 +22,16 @@ def get_perturbation_config(pscenario, relaxation_threshold):
     return perturbation
 
 
-def run_all(relaxation, use_setup_times):
+def run_all(relaxation, use_setup_times, **config):
     """Runs ILS for every instance in the benchmark."""
-    for n in [8, 16, 32, 64]: #, 128]:
+
+    INSTANCE_DIRECTORY = config["instance_dir"]
+    OUTPUT_DIRECTORY = config["output_dir"]
+    RUNS = config["runs"]
+    PARALLEL_RUNS = config["parallel"]
+
+    import pdb; pdb.set_trace()
+    for n in [8, 16, 32, 64]:
         for q in [2**i for i in range(0, 10) if 2**i <= n]:
 
             # Problem scneario (with or without setup times)
@@ -76,6 +76,16 @@ def run_all(relaxation, use_setup_times):
 
 
 if __name__ == "__main__":
-    for use_setup_times in [True, False]:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", dest="instance_dir", type=Path, default=Path("."),
+                        help="directory where instances are located")
+    parser.add_argument("-o", dest="output_dir", type=Path, default=Path("ils"),
+                        help="directory to export solutions and logs")
+    parser.add_argument("--runs", type=int, default=35,
+                        help="number of repetitions to perform (default 35)")
+    parser.add_argument("--parallel", type=int, default=4,
+                        help="number of parallel processes to spawn (default 4)")
+
+    for use_setup_times in [False, True]:
         for relaxation in [0, 0.5, 1]:
-            run_all(relaxation, use_setup_times)
+            run_all(relaxation, use_setup_times, **vars(parser.parse_args()))

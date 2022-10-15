@@ -1,17 +1,18 @@
+import argparse
 from pathlib import Path
 
 from optlis import load_instance
 from optlis.solvers.cplex import model_1, model_2, optimize
 
-# Configure this accordingly
-INSTANCE_DIRECTORY = Path("data/instances/hex/")
-OUTPUT_DIRECTORY = Path("experiments/")
-TIME_LIMIT = 14_400 # 4 hours time limit
 
-
-def run_all(relaxation, use_setup_times):
+def run_all(relaxation, use_setup_times, **config):
     """Runs CPLEX for every instance in the benchmark."""
-    for n in [8, 16, 32, 64]: #, 128]:
+
+    INSTANCE_DIRECTORY = config["instance_dir"]
+    OUTPUT_DIRECTORY = config["output_dir"]
+    TIME_LIMIT = config["time_limit"]
+
+    for n in [8, 16, 32, 64]:
         for q in [2**i for i in range(0, 10) if 2**i <= n]:
 
             # Problem scenario (with or without setup times)
@@ -38,7 +39,7 @@ def run_all(relaxation, use_setup_times):
 
             instance = load_instance(instance_path, use_setup_times)
 
-            optimize(
+            status, variables = optimize(
                 instance=instance,
                 make_model=model,
                 relaxation_threshold=relaxation,
@@ -49,6 +50,15 @@ def run_all(relaxation, use_setup_times):
 
 
 if __name__ == "__main__":
-    for use_setup_times in [True, False]:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", dest="instance_dir", type=Path, default=Path("."),
+                        help="directory where instances are located")
+    parser.add_argument("-o", dest="output_dir", type=Path, default=Path("cplex"),
+                        help="directory to export solutions and logs")
+    parser.add_argument("--time-limit", type=int, default=14_000,
+                        help="maximum time limit for the execution of each "
+                             "instance (in seconds, default 14,000)")
+
+    for use_setup_times in [False, True]:
         for relaxation in [0, 0.5, 1]:
-            run_all(relaxation, use_setup_times)
+            run_all(relaxation, use_setup_times, **vars(parser.parse_args()))
