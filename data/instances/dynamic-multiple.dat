@@ -1,0 +1,27 @@
+# format: dynamic
+# The number of products
+3
+# id risk
+0 0.0
+1 0.5
+2 0.8
+# id degradation rate
+0 0.01
+1 0.05
+2 0.08
+# id metabolization rate
+0 0.0 0.0 0.0
+1 0.0 0.0 0.2
+2 0.0 0.0 0.0
+# The number of nodes
+3
+# id type K_n K_r p
+0 0 0 0 0
+1 1 0 0 5
+2 1 0 0 5
+# The concentration of each product on each node
+2
+1 0 1 0
+2 0 1 0
+# The time horizon
+50
