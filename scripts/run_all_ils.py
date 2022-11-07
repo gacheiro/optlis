@@ -30,7 +30,6 @@ def run_all(relaxation, use_setup_times, **config):
     RUNS = config["runs"]
     PARALLEL_RUNS = config["parallel"]
 
-    import pdb; pdb.set_trace()
     for n in [8, 16, 32, 64]:
         for q in [2**i for i in range(0, 10) if 2**i <= n]:
 
