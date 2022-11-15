@@ -3,14 +3,11 @@ from pathlib import Path
 from ctypes import cdll, byref
 
 # Tries to locate the localsearch.so lib.
-try:
-    path = Path(os.environ.get("OPTLIS_LIB"))
-    if path.is_file():
-        _lib = cdll.LoadLibrary(path)
-    else:
-        _lib = cdll.LoadLibrary(path / "localsearch.so")
-except OSError:
-    raise
+path = Path(os.environ.get("OPTLIS_LIB"))
+if path.is_file():
+    _lib = cdll.LoadLibrary(path)
+else:
+    _lib = cdll.LoadLibrary(path / "localsearch.so")
 
 
 def earliest_finish_time(solution):

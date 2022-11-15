@@ -8,18 +8,25 @@ from optlis import load_instance, import_solution
 from optlis.utils import _write_solution, _write_instance
 
 
-def test_Graph():
-    """Tests the Graph class."""
-    inst = load_instance(Path("data/instances/example.dat"))
-    assert np.array_equal(inst.depots, np.array([0]))
-    assert np.array_equal(inst.tasks, np.array([1, 2, 3, 4, 5, 6, 7, 8]))
-    # Same time horizon as defined in the instance file
-    assert inst.time_horizon == 56
-    assert list(inst.time_periods)[-1] == 55
-    # We set G.time_horizon = None, now the time horizon is estimated
-    # by a formula (see G.time_periods)
-    inst.time_horizon = None
-    assert list(inst.time_periods)[-1] == 75
+
+def test_Graph(example_instance):
+    """Tests the Instance class."""
+    assert np.array_equal(example_instance.depots,
+                          np.array([0]))
+    assert np.array_equal(example_instance.tasks,
+                          np.array([1, 2, 3, 4, 5, 6, 7, 8]))
+
+
+@pytest.mark.parametrize(["time_horizon", "T"],
+                         [(None, 76), (70, 69), (15, 14)])
+def test_Graph__time_horizon(time_horizon, T, example_instance):
+    """Tests the Instance `time_horizon` property."""
+    # If `time_horizon is None`, T should be calculated by
+    # a formula (see `Instance.time_periods`).
+    # Otherwise, T = time_horizon -1. Which means the time units
+    # go from 0 to T-1 (included)
+    example_instance.time_horizon = time_horizon
+    assert max(example_instance.time_periods) == T
 
 
 @pytest.mark.parametrize(["d", "precedence"], [
@@ -41,9 +48,9 @@ def test_Graph():
          (6, 1),
          (5, 1)]),
   (1, [])])
-def test_Graph__precedence(d, precedence):
+def test_Graph__precedence(d, precedence, example_instance):
     """Tests the precedence generation with the relaxation threshold."""
-    inst = load_instance(Path("data/instances/example.dat"))
+    inst = example_instance
     assert set(inst.precedence(d=d)) == set(precedence)
 
 
@@ -54,9 +61,9 @@ def test_load_instance(instance_grid3x3_data):
     assert set(inst.edges) == set(instance_grid3x3_data[1])
 
 
-def test_export_instance():
+def test_export_instance(example_instance):
     """Tests the function to export a problem instance to a text file."""
-    inst = load_instance(Path("data/instances/example.dat"))
+    inst = example_instance
     outfile = StringIO()
     _write_instance(inst, outfile)
     outfile.seek(0)
@@ -86,9 +93,9 @@ def test_export_instance():
                                         "55\n"))
 
 
-def test_import_solution():
+def test_import_solution(example_solution):
     """"Tests the function to import a solution from a text file."""
-    assert import_solution("data/solutions/example.sol") == dict(
+    assert example_solution == dict(
         # Completion date
         cd_1=56,
         cd_2=50,

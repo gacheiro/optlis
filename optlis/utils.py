@@ -29,13 +29,13 @@ class Instance(nx.Graph):
 
     @property
     def time_periods(self):
-        """Returns a list of time periods from 0 to T - 1.
+        """Returns a list of time units from 0 to T - 1.
            The `G.time_horizon` attribute is used for T if it's not None.
-           Otherwise, T is calculated with the formula:
+           Otherwise, T is calculated by the formula:
 
            (the graph's diameter * the number of nodes
            + the sum of the job durations) divided by
-           the number of wts.
+           the number of wts + 1.
         """
         if self.time_horizon is not None:
             T = self.time_horizon
@@ -46,12 +46,13 @@ class Instance(nx.Graph):
                 sum(nx.get_node_attributes(self, "p").values())
             )
             diameter = nx.diameter(self)
-            T = ceil((diameter*nb_nodes + sum_durations) / nb_wts)
-        return list(range(T))
+            T = ceil((diameter*nb_nodes + sum_durations) / nb_wts) + 1
+            T = max(T, 21) # sets a minimum of 20 time units
+        return np.array(list(range(T)), dtype=np.int32)
 
     @cached_property
     def setup_times(self):
-        """Returns the sequence-dependent setup times."""
+        """Returns a 2d numpy array with the sequence-dependent setup times."""
         s_dict = dict(nx.shortest_path_length(self, weight="weight"))
         nnodes = len(self.nodes())
         s = np.zeros((nnodes, nnodes), dtype=np.int32)
@@ -62,16 +63,23 @@ class Instance(nx.Graph):
 
     @cached_property
     def node_resources(self):
+        """Returns a numpy array with the number of resources present at each node."""
         return np.array([p for p in nx.get_node_attributes(self, "q").values()],
                         dtype=np.int32)
 
     @cached_property
     def node_durations(self):
+        """Returns a numpy array with the `duration` attribute of each node.
+           NOTE: Some nodes may have 0 duration, which means they are not tasks.
+        """
         return np.array([p for p in nx.get_node_attributes(self, "p").values()],
                         dtype=np.int32)
 
     @cached_property
     def node_risks(self):
+        """Returns a numpy array with the `risk` attribute of each node.
+           NOTE: Some nodes may have 0 risk, which means they are not tasks.
+        """
         return np.array([r for r in nx.get_node_attributes(self, "r").values()],
                         dtype=np.float64)
 
