@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="optlis",
-    version="0.1.dev",
+    version="0.1.0",
     author="Thiago J. Barbalho",
     description=__doc__,
     packages = ["optlis"],
