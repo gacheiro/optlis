@@ -12,7 +12,7 @@ Once you are inside the project folder, start by building the C code:
 make
 ```
 
-And export the `lib` directory as a environment variable using the absolute path:
+And export the `lib` directory as an environment variable using the absolute path:
 
 ```bash
 export OPTLIS_LIB=path/to/optlis/lib
@@ -33,3 +33,23 @@ pytest
 ```
 
 You will also have to manually install CPLEX python interface if you want to run the integer models.
+
+## Usage
+
+```bash
+optlis --help
+```
+
+Generate the instances:
+
+```bash
+mkdir instance-benchmark
+optlis generate instance-benchmark
+```
+
+Solve an instance with an optimization model:
+
+```bash
+optlis cplex /path/to/instance
+optlis ils /path/to/instance
+```
