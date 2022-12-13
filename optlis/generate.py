@@ -57,12 +57,6 @@ def generate_benchmark(export_dir="", seed=0):
             )
 
 
-def from_command_line():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("export-dir", type=Path,
-                        help="directory to export instances (must exist)")
-    parser.add_argument("--seed", type=int, default=0,
-                        help="seed for the random number generator (default 0)")
-    args = vars(parser.parse_args())
+def from_command_line(args):
     generate_benchmark(args["export-dir"],
                        args["seed"])
