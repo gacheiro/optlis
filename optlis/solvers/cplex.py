@@ -158,6 +158,9 @@ def optimize(instance, make_model, relaxation_threshold=0.0,
     # TODO: configure how the MILP are exported
     # prob.writeLP("OverallStatickRisk.lp")
 
+    if time_limit is not None and time_limit <= 0:
+        time_limit = None
+
     if log_path:
         log_path = Path(log_path)
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -188,17 +191,12 @@ def optimize(instance, make_model, relaxation_threshold=0.0,
     return prob.status, prob.variables()
 
 
-def from_command_line():
-    parser = argparse.ArgumentParser(parents=[solver_parser])
-    parser.add_argument("--time-limit", type=int,
-                        help="maximum time limit for the execution (in seconds)")
-    args = vars(parser.parse_args())
-
+def from_command_line(args):
     instance = load_instance(args["instance-path"],
-                             args["setup_times"])
+                             args["travel_times"])
 
-    # Chooses models 1 or 2 based on the use of sequence-dependent setup times
-    make_model = model_2 if args["setup_times"] else model_1
+    # Chooses models 1 or 2 based on the use of travel times
+    make_model = model_2 if args["travel_times"] else model_1
 
     optimize(instance,
              make_model,

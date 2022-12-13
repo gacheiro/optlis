@@ -199,23 +199,10 @@ def optimize(instance, runs=35, parallel=4, relaxation_threshold=0.0,
     return results
 
 
-def from_command_line():
-    parser = argparse.ArgumentParser(parents=[solver_parser])
-    parser.add_argument("--evaluations", type=int, default=0,
-                        help="max number of evaluation calls (default n vs. 10000)")
-    parser.add_argument("--runs", type=int, default=35,
-                        help="number of repetitions to perform (default 35)")
-    parser.add_argument("--parallel", type=int, default=4,
-                        help="number of parallel processes to spawn (default 4)")
-    parser.add_argument("--seed", type=int, default=0,
-                        help="seed for the random number generator (default 0)")
-    parser.add_argument("--tunning", dest="tunning", action="store_true",
-                        help="activate the tunning mode (disable multiple runs)")
-    args = vars(parser.parse_args())
+def from_command_line(args):
+    instance = load_instance(args["instance-path"], args["travel_times"])
 
-    instance = load_instance(args["instance-path"], args["setup_times"])
-
-    if args["tunning"]:
+    if args["tuning"]:
         import cProfile
         with cProfile.Profile() as pr:
             solution, _, time = ils(
