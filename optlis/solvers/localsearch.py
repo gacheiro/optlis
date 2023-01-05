@@ -2,26 +2,24 @@ import os
 from pathlib import Path
 from ctypes import cdll, byref
 
+from optlis.solvers.ils import Solution, Budget
+
 # Tries to locate the localsearch.so lib.
-path = Path(os.environ.get("OPTLIS_LIB"))
+path = Path(os.environ.get("OPTLIS_LIB"))  # type: ignore
 if path.is_file():
-    _lib = cdll.LoadLibrary(path)
+    _lib = cdll.LoadLibrary(path)  # type: ignore
 else:
-    _lib = cdll.LoadLibrary(path / "localsearch.so")
+    _lib = cdll.LoadLibrary(path / "localsearch.so")  # type: ignore
 
 
-def earliest_finish_time(solution):
-    raise NotImplementedError
-
-
-def local_search(solution, budget, *args, **kwargs):
+def local_search(solution: Solution, budget: Budget) -> None:
     """Provides a python interface to the local search implemented in C."""
     csolution = solution.c_struct()
     cbudget = budget.c_struct()
 
-    _lib.local_search(byref(solution.instance.c_struct()),
-                      byref(csolution),
-                      byref(cbudget))
+    _lib.local_search(
+        byref(solution.instance.c_struct()), byref(csolution), byref(cbudget)
+    )
 
     solution.objective = csolution.objective
     solution.consumed_budget = csolution.found_at

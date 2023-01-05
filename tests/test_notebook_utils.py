@@ -1,7 +1,5 @@
 import math
 
-import pytest
-
 from optlis.notebook_utils import makespan, overall_risk
 
 
