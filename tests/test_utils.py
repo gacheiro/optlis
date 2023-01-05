@@ -4,9 +4,8 @@ from io import StringIO
 import pytest
 import numpy as np
 
-from optlis import load_instance, import_solution
+from optlis import load_instance
 from optlis.utils import _write_solution, _write_instance
-
 
 
 def test_Graph(example_instance):

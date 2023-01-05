@@ -11,7 +11,7 @@ from optlis.utils import import_solution
 
 def y_axis(G, sol={}):
     """Generates the y values (the sum of the risk of not cleaned sites)
-       for plotting a solution."""
+    for plotting a solution."""
     dest = G.tasks
     r = nx.get_node_attributes(G, "r")
     cdf = lambda i: sol.get(f"cd_{i}") or sol.get(f"C_{i}") # compatibility between two tipes of solution formats
@@ -26,8 +26,9 @@ def y_axis(G, sol={}):
         yield sum(r[i] for i in dest if cd[i] >= t)
 
 
-def plot_overall_risk(instance_path, sol_paths=[],
-                      alpha=0.8, labels=[], print_data=False):
+def plot_overall_risk(
+    instance_path, sol_paths=[], alpha=0.8, labels=[], print_data=False
+):
     """Plot solutions sobreposed over a graph of risk per time period."""
     G = load_instance(instance_path)
     print(f"Instance {instance_path}")
@@ -49,7 +50,9 @@ def plot_overall_risk(instance_path, sol_paths=[],
             print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y)))
         ax.fill_between(x, y, alpha=alpha, label=label)
     ax.set(xlabel="time", ylabel="accumulated risk")
-    ax.legend(loc='upper right')
+    ax.legend(loc="upper right")
+    if print_data:
+        print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y)))
     plt.show()
 
 
@@ -63,15 +66,15 @@ def overall_risk(G, sol={}):
     acc_risk = sum(y_axis(G, sol))
     # Checks for the accumulated risk in the solution.
     # If it's not defined, we ignore and return the computed value
-    assert math.isclose(sol.get("overall_risk", acc_risk), acc_risk), (
-           f"accumulated risks differ {acc_risk} != {sol['overall_risk']}")
+    assert math.isclose(
+        sol.get("overall_risk", acc_risk), acc_risk
+    ), f"accumulated risks differ {acc_risk} != {sol['overall_risk']}"
     return acc_risk
 
 
 def plot_gantt_diagram(instance_path, sol_path):
     """Plots the grantt diagram for a given instance and solution."""
-    inst, sol = (load_instance(instance_path),
-                 import_solution(sol_path))
+    inst, sol = (load_instance(instance_path), import_solution(sol_path))
 
     plt.rcdefaults()
     fig, ax = plt.subplots()
@@ -81,18 +84,18 @@ def plot_gantt_diagram(instance_path, sol_path):
     durations = [inst.nodes[j]["p"] for j in jobs]
     y_pos = np.arange(len(jobs))
 
-    ax.barh(y_pos, durations, left=start_dates, align='center')
+    ax.barh(y_pos, durations, left=start_dates, align="center")
     ax.set_yticks(y_pos)
     ax.set_yticklabels(jobs)
     ax.invert_yaxis()  # labels read top-to-bottom
-    ax.set_xlabel('time')
+    ax.set_xlabel("time")
     ax.grid(True)
     plt.show()
 
 
 def linear_regression(x, y):
     """Calculates the best fitting line representing a dataset.
-       See: https://realpython.com/linear-regression-in-python/
+    See: https://realpython.com/linear-regression-in-python/
     """
     return LinearRegression().fit(x, y)
 
@@ -105,23 +108,28 @@ def plot_points_with_best_fit_line(ax, x, y, psize=80, labels=["x", "y"]):
     rx = x.reshape((-1, 1))
     ax.plot(x, linear_regression(rx, y).predict(rx))
     print(x, y)
-    print('intercept:', linear_regression(rx, y).intercept_)
-    print('slope:', linear_regression(rx, y).coef_)
+    print("intercept:", linear_regression(rx, y).intercept_)
+    print("slope:", linear_regression(rx, y).coef_)
     return ax
 
 
 def plot_task_policies(instance, sol, figsize=(18, 6)):
-    """"Plots the following graphs together:
+    """ "Plots the following graphs together:
 
-        Task risk vs. completion time
-        Task duration vs. completion time
-        Task distance from depot vs. completion time
+    Task risk vs. completion time
+    Task duration vs. completion time
+    Task distance from depot vs. completion time
     """
     tasks = instance.tasks
     sp = dict(nx.shortest_path_length(instance))
-    xs = [np.array(x) for x in ([instance.nodes[i]["r"] for i in tasks],
-                                [instance.nodes[i]["p"] for i in tasks],
-                                [sp[0][i] for i in tasks])]
+    xs = [
+        np.array(x)
+        for x in (
+            [instance.nodes[i]["r"] for i in tasks],
+            [instance.nodes[i]["p"] for i in tasks],
+            [sp[0][i] for i in tasks],
+        )
+    ]
     y = np.array([sol.get(f"cd_{i}", 0) for i in tasks])
     x_labels = ("risk", "duration", "distance from depot")
     y_label = "completion time"
@@ -156,9 +164,11 @@ if __name__ == "__main__":
     # The overall risk
     overall_risk1 = accumulated_risk(G, sol1)
     overall_risk2 = accumulated_risk(G, sol2)
-    print(f"\nAccumulated risk 1 = {overall_risk1}\nAccumulated risk 2 = {overall_risk2}")
+    print(
+        f"\nAccumulated risk 1 = {overall_risk1}\nAccumulated risk 2 = {overall_risk2}"
+    )
 
-    '''
+    """
     plot_gantt_diagram(
         instance_path=f"data/instances/{instance_name}.dat",
         sol_path=f"data/solutions/m1/{instance_name}_0.sol",
@@ -168,11 +178,13 @@ if __name__ == "__main__":
         instance_path=f"data/instances/{instance_name}.dat",
         sol_path=f"data/solutions/m1/{instance_name}_1.sol",
     )
-    '''
+    """
 
     plot_accumulated_risk(
         instance_path=f"data/instances/{instance_name}.dat",
         sol_paths=[
             f"data/solutions/m1/{instance_name}_1.sol",
-            f"data/solutions/m1/{instance_name}_0.sol"],
-        labels=["$f_{1}$", "$f_{0}$"])
+            f"data/solutions/m1/{instance_name}_0.sol",
+        ],
+        labels=["$f_{1}$", "$f_{0}$"],
+    )
