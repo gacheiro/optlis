@@ -1,4 +1,9 @@
+# experiments
+.experiments/
 experiments/
+*.log
+*.sol
+*.lp
 
 # irace
 *.stderr
@@ -7,9 +12,6 @@ experiments/
 
 # Dev
 .vscode
-*.lp
-*.log
-*.bat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

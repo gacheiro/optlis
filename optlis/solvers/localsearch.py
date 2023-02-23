@@ -2,7 +2,6 @@ import os
 from pathlib import Path
 from ctypes import cdll, byref
 
-from optlis.solvers.ils import Solution, Budget
 
 # Tries to locate the localsearch.so lib.
 path = Path(os.environ.get("OPTLIS_LIB"))  # type: ignore
@@ -12,7 +11,7 @@ else:
     _lib = cdll.LoadLibrary(path / "localsearch.so")  # type: ignore
 
 
-def local_search(solution: Solution, budget: Budget) -> None:
+def local_search(solution, budget) -> None:
     """Provides a python interface to the local search implemented in C."""
     csolution = solution.c_struct()
     cbudget = budget.c_struct()

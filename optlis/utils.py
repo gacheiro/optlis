@@ -224,5 +224,5 @@ def _write_solution(
     """Writes a solution to a file."""
     outfile.write(f"Solution for instance {instance_path}\n")
     for var, value in solution.items():
-        if value and value > 0:
+        if value is not None:
             outfile.write(f"{var} = {value}\n")
