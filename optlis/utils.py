@@ -209,8 +209,6 @@ def export_solution(
     """Exports a solution to a simple text file since
     pulp's solution files are too big. We only need the
     variables that are > 0 anyway ¯\\_(ツ)_//¯
-
-    NOTE: only works for pulp's solution and variables with value 0 are ignored.
     """
     with open(outfile_path, "w") as outfile:
         _write_solution(solution, instance_path, outfile)
