@@ -6,12 +6,12 @@
 1 0.5
 2 0.8
 # id degradation rate
-0 0.0
+0 0.00
 1 0.0
-2 0.0
+2 0.01
 # id risk transformation_rate
 0 0.0 0.0 0.0
-1 0.0 0.0 0.2
+1 0.0 0.0 0.05
 2 0.0 0.0 0.0
 # The number of nodes
 9

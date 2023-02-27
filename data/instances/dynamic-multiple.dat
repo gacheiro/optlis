@@ -8,7 +8,7 @@
 # id degradation rate
 0 0.01
 1 0.05
-2 0.08
+2 0.0
 # id metabolization rate
 0 0.0 0.0 0.0
 1 0.0 0.0 0.2

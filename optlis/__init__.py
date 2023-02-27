@@ -36,6 +36,12 @@ solver_parser.add_argument(
     "--log-path", type=Path, help="path to write the execution log"
 )
 solver_parser.add_argument("--sol-path", type=Path, help="path to write the solution")
+solver_parser.add_argument(
+    "--dynamic",
+    dest="dynamic",
+    action="store_true",
+    help="set the problem type to dynamic",
+)
 
 # CPLEX command parser
 cplex_parser = subparsers.add_parser(
@@ -95,8 +101,16 @@ generate_parser.add_argument(
 def main() -> None:
     import optlis.generate
     from optlis.solvers import cplex, ils
+    from optlis.dynamic.models import milp
 
     args = vars(parser.parse_args())
+
+    if args["dynamic"]:
+        if args["subcommand"] == "cplex":
+            milp.from_command_line(args)
+        else:
+            raise NotImplementedError
+        return
 
     if args["subcommand"] == "generate":
         optlis.generate.from_command_line(args)
