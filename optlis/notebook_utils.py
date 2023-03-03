@@ -14,8 +14,10 @@ def y_axis(G, sol={}):
        for plotting a solution."""
     dest = G.tasks
     r = nx.get_node_attributes(G, "r")
-    cd = {i: sol.get(f"cd_{i}") for i in dest}
+    cdf = lambda i: sol.get(f"cd_{i}") or sol.get(f"C_{i}") # compatibility between two tipes of solution formats
+    cd = {i: cdf(i) for i in dest}
     if None in cd.values():
+        print(cd.values())
         raise ValueError("some of the completion dates are None")
     makespan = int(sol.get("makespan", 0))
     for t in range(1, makespan + 1):
@@ -42,12 +44,12 @@ def plot_overall_risk(instance_path, sol_paths=[],
             label = labels[i]
         except IndexError:
             label = f"sol {i}"
-        print(f"{label} makespan: {sol.get('makespan')}, area: {sum(y):.2f}")
+        print(f"\n{label} makespan: {sol.get('makespan')}, area: {sum(y):.2f}")
+        if print_data:
+            print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y)))
         ax.fill_between(x, y, alpha=alpha, label=label)
     ax.set(xlabel="time", ylabel="accumulated risk")
     ax.legend(loc='upper right')
-    if print_data:
-        print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y)))
     plt.show()
 
 
