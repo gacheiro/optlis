@@ -31,7 +31,7 @@ def make_lp(instance: Instance):
     w = plp.LpVariable.dicts(
         "w", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpContinuous
     )
-    u = plp.LpVariable.dicts("u", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
+    # u = plp.LpVariable.dicts("u", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
     x = plp.LpVariable.dicts(
         "x", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpBinary
     )
@@ -46,8 +46,8 @@ def make_lp(instance: Instance):
     q = plp.LpVariable.dicts(
         "q", indices=(TASKS, PRODUCTS, PRODUCTS, T), lowBound=0, cat=plp.LpContinuous
     )
-    c = plp.LpVariable.dicts("c", indices=(TASKS,), lowBound=0, cat=plp.LpInteger)
-    makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
+    # c = plp.LpVariable.dicts("c", indices=(TASKS,), lowBound=0, cat=plp.LpInteger)
+    # makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
 
     lp = plp.LpProblem("MIN_DYN", plp.LpMinimize)
 
@@ -131,15 +131,15 @@ def make_lp(instance: Instance):
     for t, i in set_product(T, TASKS):
         lp += plp.lpSum(x[i][p][t] for p in PRODUCTS) + z[i][t] <= 1
 
-    # Calculates tasks' completion times and project's makespan
-    for i in TASKS:
-        for t in T:
-            lp += (
-                M * u[i][t]
-                >= plp.lpSum(RISK[p] * w[i][p][t] for p in PRODUCTS) - EPSILON
-            )
-            lp += c[i] >= t * u[i][t]
-        lp += makespan >= c[i]
+    # # Calculates tasks' completion times and project's makespan
+    # for i in TASKS:
+    #     for t in T:
+    #         lp += (
+    #             M * u[i][t]
+    #             >= plp.lpSum(RISK[p] * w[i][p][t] for p in PRODUCTS) - EPSILON
+    #         )
+    #         lp += c[i] >= t * u[i][t]
+    #     lp += makespan >= c[i]
 
     # (test only) hardcode on-site ops
     # lp += x[1][1][3] == 1
