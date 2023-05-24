@@ -36,7 +36,8 @@ def make_lp(instance: Instance):
         "x", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpBinary
     )
     y = plp.LpVariable.dicts("y", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
-    z = plp.LpVariable.dicts("z", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
+    c = plp.LpVariable.dicts("c", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
+    n = plp.LpVariable.dicts("n", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
     r = plp.LpVariable.dicts(
         "r", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpContinuous
     )
@@ -94,62 +95,72 @@ def make_lp(instance: Instance):
         )
 
     # Neutralizing operation (w[0][t] <- w[p][t-1])
+    # TODO: add neutralizing speed
     for t, i, p in set_product(T[1:], TASKS, PRODUCTS):
-        # The linearization of:
-        # lp += q[i][p][0][t] == w[i][p][t - 1] * x[i][p][t] - d[i][p][t]
-        lp += q[i][p][0][t] >= 0
-        lp += q[i][p][0][t] <= w[i][p][t - 1] - d[i][p][t]
-        lp += q[i][p][0][t] <= M * x[i][p][t]
-        lp += q[i][p][0][t] >= w[i][p][t - 1] - d[i][p][t] + M * x[i][p][t] - M
 
-    # Removal operation (w[p..][t] <- 0)
+        # Checks wether a neutralizing operation is active
+        time_window = range(t - DURATIONS[i] + 1, t + 1)
+        is_active = plp.lpSum(
+            x[i][p][tau] for p in PRODUCTS for tau in time_window if tau >= 1
+        )
+
+        # The linearization of:
+        # lp += q[i][p][0][t] == (0.05 * w[i][p][t - 1]) * x[i][p][t] - d[i][p][t]
+        lp += q[i][p][0][t] >= 0
+        lp += q[i][p][0][t] <= 0.05 * w[i][p][t - 1] - d[i][p][t]
+        lp += q[i][p][0][t] <= M * is_active
+        lp += q[i][p][0][t] >= 0.05 * w[i][p][t - 1] - d[i][p][t] + M * is_active - M
+
+    # Cleaning operation (w[p..][t] <- 0)
     for t, i, p in set_product(T[1:], TASKS, PRODUCTS):
+
+        # Checks wether a cleaning operation is active
+        time_window = range(t - DURATIONS[i] + 1, t + 1)
+        is_active = plp.lpSum(
+            y[i][tau] for tau in time_window if tau >= 1
+        )
+
         # The linearization of:
         # lp += r[i][p][t] == w[i][p][t - 1] * y[i][t] - d[i][p][t]
         lp += r[i][p][t] >= 0
-        lp += r[i][p][t] <= w[i][p][t - 1] - d[i][p][t]
-        lp += r[i][p][t] <= M * y[i][t]
-        lp += r[i][p][t] >= w[i][p][t - 1] - d[i][p][t] + M * y[i][t] - M
+        lp += r[i][p][t] <= 0.05 * w[i][p][t - 1] - d[i][p][t]
+        lp += r[i][p][t] <= M * is_active
+        lp += r[i][p][t] >= 0.05 * w[i][p][t - 1] - d[i][p][t] + M * is_active - M
 
-    # Removal operation active on task i at time t (z[i][t} == 1)
+    # Cleaning operation active on task i at time t (c[i][t} == 1)
     for t, i in set_product(T, TASKS):
         time_window = range(t - DURATIONS[i] + 1, t + 1)
-        lp += z[i][t] == plp.lpSum(y[i][tau] for tau in time_window if tau >= 1)
+        lp += c[i][t] == plp.lpSum(y[i][tau] for tau in time_window if tau >= 1)
 
-    # Resource constraints (removal operation)
+    # Resource constraints (cleaning operation)
     for t in T:
-        lp += plp.lpSum(z[i][t] for i in TASKS) <= RESOURCES["R"]
+        lp += plp.lpSum(c[i][t] for i in TASKS) <= RESOURCES["R"]
+
+    # Neutralizing operation active on task i at time t (n[i][t} == 1)
+    for t, i in set_product(T, TASKS):
+        # FIXME: neutralizing duration should be stated in the instance file
+        time_window = range(t - DURATIONS[i] + 1, t + 1)
+        lp += n[i][t] == plp.lpSum(
+            x[i][p][tau] for p in PRODUCTS for tau in time_window if tau >= 1
+        )
 
     # Resource constraints (neutralizing operation)
     for t in T:
-        lp += (
-            plp.lpSum(x[i][p][t] for i, p in set_product(TASKS, PRODUCTS))
-            <= RESOURCES["N"]
-        )
+        lp += plp.lpSum(n[i][t] for i in TASKS) <= RESOURCES["N"]
 
-    # Can't perform remove and neutralize operations at the same time
+    # Operations cannot overlap
     for t, i in set_product(T, TASKS):
-        lp += plp.lpSum(x[i][p][t] for p in PRODUCTS) + z[i][t] <= 1
-
-    # # Calculates tasks' completion times and project's makespan
-    # for i in TASKS:
-    #     for t in T:
-    #         lp += (
-    #             M * u[i][t]
-    #             >= plp.lpSum(RISK[p] * w[i][p][t] for p in PRODUCTS) - EPSILON
-    #         )
-    #         lp += c[i] >= t * u[i][t]
-    #     lp += makespan >= c[i]
+        lp += n[i][t] + c[i][t] <= 1
 
     # (test only) hardcode on-site ops
     # lp += x[1][1][3] == 1
-    # lp += x[2][1][3] == 1
-    # lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 0
+    # lp += x[1][1][3] == 1
+    lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 0
 
     # (test only) hardcode on-site ops
     # lp += y[1][4] == 1
-    # lp += y[2][4] == 1
-    # lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 0
+    # lp += y[1][2] == 1
+    lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 1
 
     # (test only) disable operations at t = 1
     for i in TASKS:
