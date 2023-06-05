@@ -1,4 +1,5 @@
 import argparse
+import math
 from typing import Dict, Any, Optional, Union
 from itertools import product as set_product
 from pathlib import Path
@@ -8,13 +9,16 @@ import pulp as plp
 from optlis import export_solution
 from optlis.dynamic import Instance, load_instance
 
+# Problem constants
+M = 999999
+EPSILON = 0.01
+CLEANING_SPEED = 0.15
+
 
 def make_lp(instance: Instance):
     """Implements the mixed integer linear model for the problem."""
 
     # Problem data
-    M = 999999
-    EPSILON = 0.01
     TASKS = instance.tasks
     DURATIONS = instance.durations
     RESOURCES = instance.resources
@@ -26,17 +30,29 @@ def make_lp(instance: Instance):
     dr = instance.degradation_rate
     mr = instance.metabolization_rate
 
+    # Calculates the dynamic task duration
+    def latest_start_date(i, t):
+        """Returns the latest start time for i if i finishes exactly at time t."""
+        for s in T:
+            v = max(V[i][p] for p in PRODUCTS)
+            tt = s
+            while v > EPSILON:
+                v -= CLEANING_SPEED
+                tt += 1
+            else:
+                if tt == t:
+                    return s
+        return 1
+
     # Creates the model's variables
     global_risk = plp.LpVariable("global_risk", lowBound=0, cat=plp.LpContinuous)
     w = plp.LpVariable.dicts(
         "w", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpContinuous
     )
-    # u = plp.LpVariable.dicts("u", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
     x = plp.LpVariable.dicts(
         "x", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpBinary
     )
     y = plp.LpVariable.dicts("y", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
-    c = plp.LpVariable.dicts("c", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
     n = plp.LpVariable.dicts("n", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
     r = plp.LpVariable.dicts(
         "r", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpContinuous
@@ -47,7 +63,6 @@ def make_lp(instance: Instance):
     q = plp.LpVariable.dicts(
         "q", indices=(TASKS, PRODUCTS, PRODUCTS, T), lowBound=0, cat=plp.LpContinuous
     )
-    # c = plp.LpVariable.dicts("c", indices=(TASKS,), lowBound=0, cat=plp.LpInteger)
     # makespan = plp.LpVariable("makespan", lowBound=0, cat=plp.LpInteger)
 
     lp = plp.LpProblem("MIN_DYN", plp.LpMinimize)
@@ -57,9 +72,6 @@ def make_lp(instance: Instance):
 
     # Minimize makespan
     # lp += makespan
-
-    # Minimize sum of completion times
-    # lp += plp.lpSum(c[i] for i in V)
 
     # Calculates solution's global risk
     lp += global_risk == plp.lpSum(
@@ -115,28 +127,25 @@ def make_lp(instance: Instance):
     for t, i, p in set_product(T[1:], TASKS, PRODUCTS):
 
         # Checks wether a cleaning operation is active
-        time_window = range(t - DURATIONS[i] + 1, t + 1)
-        is_active = plp.lpSum(
-            y[i][tau] for tau in time_window if tau >= 1
-        )
+        time_window = range(latest_start_date(i, t) + 1, t + 1)
+        is_active = plp.lpSum(y[i][tau] for tau in time_window if tau >= 1)
 
         # The linearization of:
-        # lp += r[i][p][t] == w[i][p][t - 1] * y[i][t] - d[i][p][t]
-        lp += r[i][p][t] >= 0
-        lp += r[i][p][t] <= 0.05 * w[i][p][t - 1] - d[i][p][t]
-        lp += r[i][p][t] <= M * is_active
-        lp += r[i][p][t] >= 0.05 * w[i][p][t - 1] - d[i][p][t] + M * is_active - M
-
-    # Cleaning operation active on task i at time t (c[i][t} == 1)
-    for t, i in set_product(T, TASKS):
-        time_window = range(t - DURATIONS[i] + 1, t + 1)
-        lp += c[i][t] == plp.lpSum(y[i][tau] for tau in time_window if tau >= 1)
+        lp += r[i][p][t] <= CLEANING_SPEED * is_active
+        # lp += r[i][p][t] >= 0
+        # lp += r[i][p][t] <= 0.3 * w[i][p][t - 1] - d[i][p][t]
+        # lp += r[i][p][t] <= M * is_active
+        # lp += r[i][p][t] >= 0.3 * w[i][p][t - 1] - d[i][p][t] + M * is_active - M
 
     # Resource constraints (cleaning operation)
     for t in T:
-        lp += plp.lpSum(c[i][t] for i in TASKS) <= RESOURCES["R"]
+        time_window = range(latest_start_date(i, t) + 1, t + 1)
+        lp += (
+            plp.lpSum(y[i][tau] for i in TASKS for tau in time_window if tau >= 1)
+            <= RESOURCES["R"]
+        )
 
-    # Neutralizing operation active on task i at time t (n[i][t} == 1)
+    # Neutralizing operation active on task i at time t (n[i][t] == 1)
     for t, i in set_product(T, TASKS):
         # FIXME: neutralizing duration should be stated in the instance file
         time_window = range(t - DURATIONS[i] + 1, t + 1)
@@ -148,19 +157,25 @@ def make_lp(instance: Instance):
     for t in T:
         lp += plp.lpSum(n[i][t] for i in TASKS) <= RESOURCES["N"]
 
-    # Operations cannot overlap
-    for t, i in set_product(T, TASKS):
-        lp += n[i][t] + c[i][t] <= 1
+    # Each site is serviced once
+    for i in TASKS:
+        if any(V[i][p] > 0 for p in PRODUCTS):
+            lp += plp.lpSum(y[i][t] for t in T) == 1
+        else:
+            lp += plp.lpSum(y[i][t] for t in T) == 0
+
+    # # Operations cannot overlap
+    # for t, i in set_product(T, TASKS):
+    #     lp += n[i][t] + c[i][t] <= 1
 
     # (test only) hardcode on-site ops
     # lp += x[1][1][3] == 1
     # lp += x[1][1][3] == 1
-    lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 0
+    # lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 0
 
     # (test only) hardcode on-site ops
-    # lp += y[1][4] == 1
     # lp += y[1][2] == 1
-    lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 1
+    # lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 1
 
     # (test only) disable operations at t = 1
     for i in TASKS:
