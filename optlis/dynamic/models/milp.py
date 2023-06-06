@@ -1,5 +1,3 @@
-import argparse
-import math
 from typing import Dict, Any, Optional, Union
 from itertools import product as set_product
 from pathlib import Path
@@ -13,6 +11,7 @@ from optlis.dynamic import Instance, load_instance
 M = 999999
 EPSILON = 0.01
 CLEANING_SPEED = 0.15
+NEUTRALIZING_SPEED = 0.2
 
 
 def make_lp(instance: Instance):
@@ -30,14 +29,28 @@ def make_lp(instance: Instance):
     dr = instance.degradation_rate
     mr = instance.metabolization_rate
 
-    # Calculates the dynamic task duration
-    def latest_start_date(i, t):
+    # Calculates the dynamic task duration (cleaning)
+    def cleaning_latest_start_date(i, t):
         """Returns the latest start time for i if i finishes exactly at time t."""
         for s in T:
             v = max(V[i][p] for p in PRODUCTS)
             tt = s
             while v > EPSILON:
                 v -= CLEANING_SPEED
+                tt += 1
+            else:
+                if tt == t:
+                    return s
+        return 1
+
+    # Calculates the dynamic task duration (neutralizing)
+    def neutralizing_latest_start_date(i, p, t):
+        """Returns the latest start time for i if i finishes exactly at time t."""
+        for s in T:
+            v = V[i][p]
+            tt = s
+            while v > EPSILON:
+                v -= v * NEUTRALIZING_SPEED
                 tt += 1
             else:
                 if tt == t:
@@ -53,7 +66,6 @@ def make_lp(instance: Instance):
         "x", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpBinary
     )
     y = plp.LpVariable.dicts("y", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
-    n = plp.LpVariable.dicts("n", indices=(TASKS, T), lowBound=0, cat=plp.LpBinary)
     r = plp.LpVariable.dicts(
         "r", indices=(TASKS, PRODUCTS, T), lowBound=0, cat=plp.LpContinuous
     )
@@ -106,72 +118,78 @@ def make_lp(instance: Instance):
             - r[i][p][t]
         )
 
-    # Neutralizing operation (w[0][t] <- w[p][t-1])
-    # TODO: add neutralizing speed
-    for t, i, p in set_product(T[1:], TASKS, PRODUCTS):
-
-        # Checks wether a neutralizing operation is active
-        time_window = range(t - DURATIONS[i] + 1, t + 1)
-        is_active = plp.lpSum(
-            x[i][p][tau] for p in PRODUCTS for tau in time_window if tau >= 1
+    # Cleaning operation
+    for i, p, t in set_product(TASKS, PRODUCTS, T[1:]):
+        time_window = range(cleaning_latest_start_date(i, t) + 1, t + 1)
+        lp += r[i][p][t] <= CLEANING_SPEED * plp.lpSum(
+            y[i][tau] for tau in time_window if tau >= 1
         )
-
-        # The linearization of:
-        # lp += q[i][p][0][t] == (0.05 * w[i][p][t - 1]) * x[i][p][t] - d[i][p][t]
-        lp += q[i][p][0][t] >= 0
-        lp += q[i][p][0][t] <= 0.05 * w[i][p][t - 1] - d[i][p][t]
-        lp += q[i][p][0][t] <= M * is_active
-        lp += q[i][p][0][t] >= 0.05 * w[i][p][t - 1] - d[i][p][t] + M * is_active - M
-
-    # Cleaning operation (w[p..][t] <- 0)
-    for t, i, p in set_product(T[1:], TASKS, PRODUCTS):
-
-        # Checks wether a cleaning operation is active
-        time_window = range(latest_start_date(i, t) + 1, t + 1)
-        is_active = plp.lpSum(y[i][tau] for tau in time_window if tau >= 1)
-
-        # The linearization of:
-        lp += r[i][p][t] <= CLEANING_SPEED * is_active
-        # lp += r[i][p][t] >= 0
-        # lp += r[i][p][t] <= 0.3 * w[i][p][t - 1] - d[i][p][t]
-        # lp += r[i][p][t] <= M * is_active
-        # lp += r[i][p][t] >= 0.3 * w[i][p][t - 1] - d[i][p][t] + M * is_active - M
 
     # Resource constraints (cleaning operation)
     for t in T:
-        time_window = range(latest_start_date(i, t) + 1, t + 1)
+        time_window = range(cleaning_latest_start_date(i, t) + 1, t + 1)
         lp += (
             plp.lpSum(y[i][tau] for i in TASKS for tau in time_window if tau >= 1)
             <= RESOURCES["R"]
         )
 
-    # Neutralizing operation active on task i at time t (n[i][t] == 1)
-    for t, i in set_product(T, TASKS):
-        # FIXME: neutralizing duration should be stated in the instance file
-        time_window = range(t - DURATIONS[i] + 1, t + 1)
-        lp += n[i][t] == plp.lpSum(
-            x[i][p][tau] for p in PRODUCTS for tau in time_window if tau >= 1
+    # Neutralizing operation
+    for i, p, t in set_product(TASKS, PRODUCTS, T[1:]):
+
+        # Checks wether a neutralizing operation is active
+        time_window = range(neutralizing_latest_start_date(i, p, t) + 1, t + 1)
+        is_active = plp.lpSum(x[i][p][tau] for tau in time_window if tau >= 1)
+
+        lp += q[i][p][0][t] >= 0
+        lp += q[i][p][0][t] <= NEUTRALIZING_SPEED * w[i][p][t - 1] - d[i][p][t]
+        lp += q[i][p][0][t] <= M * is_active
+        lp += (
+            q[i][p][0][t]
+            >= NEUTRALIZING_SPEED * w[i][p][t - 1] - d[i][p][t] + M * is_active - M
         )
 
     # Resource constraints (neutralizing operation)
     for t in T:
-        lp += plp.lpSum(n[i][t] for i in TASKS) <= RESOURCES["N"]
+        lp += (
+            plp.lpSum(
+                x[i][p][tau]
+                for i in TASKS
+                for p in PRODUCTS
+                for tau in range(neutralizing_latest_start_date(i, p, t) + 1, t + 1)
+                if tau >= 1
+            )
+            <= RESOURCES["N"]
+        )
 
-    # Each site is serviced once
+    # Each site is cleaned no more than one time
     for i in TASKS:
-        if any(V[i][p] > 0 for p in PRODUCTS):
-            lp += plp.lpSum(y[i][t] for t in T) == 1
-        else:
-            lp += plp.lpSum(y[i][t] for t in T) == 0
+        lp += plp.lpSum(y[i][t] for t in T) <= 1
 
-    # # Operations cannot overlap
-    # for t, i in set_product(T, TASKS):
-    #     lp += n[i][t] + c[i][t] <= 1
+        # Each product is neutralized no more than time
+        for p in PRODUCTS:
+            lp += plp.lpSum(x[i][p][t] for t in T) <= 1
+
+    # On-site operations cannot overlap
+    for i, t in set_product(TASKS, T):
+
+        cleaning = plp.lpSum(
+            y[i][tau]
+            for tau in range(cleaning_latest_start_date(i, t) + 1, t + 1)
+            if tau >= 1
+        )
+
+        neutralizing = plp.lpSum(
+            x[i][p][tau]
+            for p in PRODUCTS
+            for tau in range(neutralizing_latest_start_date(i, p, t) + 1, t + 1)
+            if tau >= 1
+        )
+
+        lp += cleaning + neutralizing <= 1
 
     # (test only) hardcode on-site ops
-    # lp += x[1][1][3] == 1
-    # lp += x[1][1][3] == 1
-    # lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 0
+    # lp += x[1][1][2] == 1
+    # lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 1
 
     # (test only) hardcode on-site ops
     # lp += y[1][2] == 1
@@ -198,7 +216,7 @@ def optimize(
     prob = make_lp(instance)
 
     # TODO: configure how the MILP are exported
-    # prob.writeLP("DynamicRisk.lp")
+    prob.writeLP("DynamicRisk.lp")
 
     if log_path:
         log_path = Path(log_path)
