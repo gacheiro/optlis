@@ -9,7 +9,7 @@ import networkx as nx  # type: ignore
 import numpy as np
 import numpy.typing as npt
 
-from optlis.solvers.ctypes import c_instance, c_int32, c_size_t, c_double, POINTER
+from optlis.static.models.ctypes import c_instance, c_int32, c_size_t, c_double, POINTER
 
 
 class Instance(nx.Graph):

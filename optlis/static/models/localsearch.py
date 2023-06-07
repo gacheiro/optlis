@@ -8,7 +8,7 @@ path = Path(os.environ.get("OPTLIS_LIB"))  # type: ignore
 if path.is_file():
     _lib = cdll.LoadLibrary(path)  # type: ignore
 else:
-    _lib = cdll.LoadLibrary(path / "localsearch.so")  # type: ignore
+    _lib = cdll.LoadLibrary(path / "static" / "localsearch.so")  # type: ignore
 
 
 def local_search(solution, budget) -> None:

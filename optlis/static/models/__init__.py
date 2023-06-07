@@ -1,6 +1,9 @@
 import argparse
 from pathlib import Path
 
+import optlis.static.models.milp as milp
+import optlis.static.models.ils as ils
+
 # Generic solver command line parser (for cplex and ils)
 solver_parser = argparse.ArgumentParser(add_help=False)
 solver_parser.add_argument("instance-path", type=Path, help="problem instance path")

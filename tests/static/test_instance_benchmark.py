@@ -1,6 +1,6 @@
 import numpy as np
 
-from optlis import generate_instance
+from optlis.static.instance_benchmark import generate_instance
 
 
 def test_generate_instance():

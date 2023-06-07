@@ -9,9 +9,9 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
-from optlis import Instance, load_instance
+from optlis.static.utils import Instance, load_instance
 
-from optlis.solvers.ctypes import (
+from optlis.static.models.ctypes import (
     c_solution,
     c_budget,
     c_int32,
@@ -19,7 +19,7 @@ from optlis.solvers.ctypes import (
     c_double,
     POINTER,
 )
-from optlis.solvers.localsearch import local_search
+from optlis.static.models.localsearch import local_search
 
 
 @dataclass

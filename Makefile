@@ -1,9 +1,10 @@
-eft: optlis/solvers/localsearch.c
+eft: optlis/static/models/localsearch.c
 	mkdir -p build lib
-	gcc -c -fPIC optlis/solvers/localsearch.c -o build/localsearch.o
-	gcc -shared -Wl,-soname,localsearch.so -o lib/localsearch.so build/localsearch.o
+	mkdir -p build/static lib/static
+	gcc -c -fPIC optlis/static/models/localsearch.c -o build/static/localsearch.o
+	gcc -shared -Wl,-soname,localsearch.so -o lib/static/localsearch.so build/static/localsearch.o
 
 clean:
-	rm build/localsearch.o
+	rm build/static/localsearch.o
 
 .PHONY: clean

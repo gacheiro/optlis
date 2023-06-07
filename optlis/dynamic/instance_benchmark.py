@@ -46,7 +46,7 @@ def two_species_instance(size, res, zero_degradation_rate=False, random_seed=0):
         for j in range(nproducts):
             if j == 0:
                 initial_concentration[i][j] = 0
-            
+
             elif initial_concentration[i][j] < 0:
                 initial_concentration[i][j] = 0
 
@@ -58,7 +58,11 @@ def two_species_instance(size, res, zero_degradation_rate=False, random_seed=0):
     metabolization_map = {(products[1], products[2]): rng.uniform(0.01, 0.05)}
 
     return Instance(
-        g.nodes(data=True), risk, degradation_rate, metabolization_map, initial_concentration
+        g.nodes(data=True),
+        risk,
+        degradation_rate,
+        metabolization_map,
+        initial_concentration,
     )
 
 

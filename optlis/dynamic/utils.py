@@ -4,7 +4,7 @@ from pathlib import Path
 import networkx as nx
 import numpy as np
 
-from optlis import Instance as StaticInstance
+from optlis.static.utils import Instance as StaticInstance
 
 
 class Instance(StaticInstance):

@@ -1,12 +1,12 @@
 import pytest
 import networkx as nx
 
-from optlis import load_instance, import_solution, Instance
+from optlis.static.utils import load_instance, import_solution, Instance
 
 
 @pytest.fixture(scope="session")
 def instance_grid3x3_data():
-    """"The data inside the example.dat instance."""
+    """ "The data inside the example.dat instance."""
     nodes = [
         (0, {"type": 0, "p": 0, "q": 1, "r": 0.0}),
         (1, {"type": 1, "p": 5, "q": 0, "r": 0.1}),
@@ -19,11 +19,15 @@ def instance_grid3x3_data():
         (8, {"type": 1, "p": 5, "q": 0, "r": 0.7}),
     ]
     edges = [
-        (0, 1), (0, 3),
-        (1, 2), (1, 4),
+        (0, 1),
+        (0, 3),
+        (1, 2),
+        (1, 4),
         (2, 5),
-        (3, 4), (3, 6),
-        (4, 5), (4, 7),
+        (3, 4),
+        (3, 6),
+        (4, 5),
+        (4, 7),
         (5, 8),
         (6, 7),
         (7, 8),

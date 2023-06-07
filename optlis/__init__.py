@@ -1,14 +1,11 @@
 import argparse
 from pathlib import Path
 
-from .utils import (
-    Instance,
-    load_instance,
-    export_instance,
-    import_solution,
-    export_solution,
-)
-from .generate import generate_instance
+import optlis.static.models
+import optlis.static.instance_benchmark
+
+import optlis.dynamic.instance_benchmark
+import optlis.dynamic.models
 
 # Top level parser
 parser = argparse.ArgumentParser()
@@ -99,30 +96,25 @@ generate_parser.add_argument(
 
 
 def main() -> None:
-    import optlis.generate
-    from optlis.solvers import cplex, ils
-    from optlis.dynamic.models import milp
-
     args = vars(parser.parse_args())
 
     if args["subcommand"] == "generate":
         if args["dynamic"]:
-            import optlis.dynamic.instance_benchmark
             optlis.dynamic.instance_benchmark.from_command_line(args)
         else:
-            optlis.generate.from_command_line(args)
+            optlis.static.instance_benchmark.from_command_line(args)
 
     elif args["subcommand"] == "ils":
         if args["dynamic"]:
             raise NotImplementedError
         else:
-            ils.from_command_line(args)
+            optlis.static.models.ils.from_command_line(args)
 
     elif args["subcommand"] == "cplex":
         if args["dynamic"]:
-            milp.from_command_line(args)
+            optlis.dynamic.models.milp.from_command_line(args)
         else:
-            cplex.from_command_line(args)
+            optlis.static.models.milp.from_command_line(args)
 
 
 if __name__ == "__main__":

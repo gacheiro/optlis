@@ -1,10 +1,10 @@
 from pathlib import Path
 from invoke import task, Failure
 
-from optlis.utils import load_instance
-from optlis.generate import generate_benchmark
-from optlis.solvers.ils import show_stats, optimize as ils
-from optlis.solvers.cplex import model_1, model_2, optimize as cplex
+from optlis.static.utils import load_instance
+from optlis.static.instance_benchmark import generate_benchmark
+from optlis.static.models.ils import show_stats, optimize as ils
+from optlis.static.models.milp import model_1, model_2, optimize as cplex
 
 
 @task
@@ -15,27 +15,27 @@ def check(c):
     print("OK" if has_gcc else "not found")
 
 
-@task
-def build(c):
-    """Builds the c library with the gcc compiler."""
-    build_dir, lib_dir = Path("./build"), Path("./lib")
-    build_dir.mkdir(exist_ok=True)
-    lib_dir.mkdir(exist_ok=True)
+# @task
+# def build(c):
+#     """Builds the c library with the gcc compiler."""
+#     build_dir, lib_dir = Path("./build"), Path("./lib")
+#     build_dir.mkdir(exist_ok=True)
+#     lib_dir.mkdir(exist_ok=True)
 
-    print("Building c library with gcc...", end="")
-    try:
-        c.run(
-            "gcc -c -fPIC optlis/solvers/localsearch.c -o "
-            f"{build_dir / 'localsearch.o'}"
-        )
-        c.run(
-            f"gcc -shared -Wl,-soname,localsearch.so -o "
-            f"{lib_dir / 'localsearch.so'} {build_dir / 'localsearch.o'}"
-        )
-    except Failure as ex:
-        print(ex)
-    else:
-        print("Done")
+#     print("Building c library with gcc...", end="")
+#     try:
+#         c.run(
+#             "gcc -c -fPIC optlis/solvers/localsearch.c -o "
+#             f"{build_dir / 'localsearch.o'}"
+#         )
+#         c.run(
+#             f"gcc -shared -Wl,-soname,localsearch.so -o "
+#             f"{lib_dir / 'localsearch.so'} {build_dir / 'localsearch.o'}"
+#         )
+#     except Failure as ex:
+#         print(ex)
+#     else:
+#         print("Done")
 
 
 @task(
