@@ -1,4 +1,8 @@
+from typing import Any, Dict, Union, Generator, Tuple, TextIO, Optional
+from pathlib import Path
+
 import networkx as nx
+import numpy as np
 
 from optlis import Instance as StaticInstance
 
@@ -17,8 +21,8 @@ class Instance(StaticInstance):
     @property
     def resources(self):
         return dict(
-            N=sum(nx.get_node_attributes(self, "kn").values()),
-            R=sum(nx.get_node_attributes(self, "kr").values()),
+            Qn=sum(nx.get_node_attributes(self, "Qn").values()),
+            Qc=sum(nx.get_node_attributes(self, "Qc").values()),
         )
 
     @property
@@ -27,22 +31,33 @@ class Instance(StaticInstance):
 
     @property
     def risk(self):
-        return dict(self._risk)
+        try:
+            # TODO: deprecate this in favor of the later
+            return dict(self._risk)
+        except TypeError:
+            return np.array(self._risk, dtype=np.float64)
 
     @property
     def products(self):
         nproducts = len(self._risk)
         return list(range(nproducts))
 
-    @property
-    def initial_concentration(self):
-        return dict(self._initial_concentration)
+    def initial_concentration(self, i, p):
+        return self._initial_concentration[i][p]
 
     def degradation_rate(self, p):
         return self._degradation_rate[p]
 
     def metabolization_rate(self, p, q):
-        return self._metabolization_rate[p][q]
+        try:
+            # TODO: deprecate this in favor of the later
+            return self._metabolization_rate[p][q]
+        except KeyError:
+            return self._metabolization_rate.get((p, q), 0)
+
+    @property
+    def time_periods(self):
+        return np.array(range(102))
 
 
 def load_instance(path):
@@ -82,15 +97,15 @@ def load_instance(path):
     nnodes = int(next(instance_data))
     for _ in range(nnodes):
         line = next(instance_data)
-        nid, ntype, kn, kr, p = line.split()
+        nid, ntype, Qn, Qc, D = line.split()
         nodes.append(
             (
                 int(nid),
                 {
                     "type": int(ntype),
-                    "kn": int(kn),
-                    "kr": int(kr),
-                    "p": int(p),
+                    "Qn": int(Qn),
+                    "Qc": int(Qc),
+                    "D": int(D),
                 },
             )
         )
@@ -109,3 +124,47 @@ def load_instance(path):
     instance.time_horizon = int(next(instance_data))
 
     return instance
+
+
+def export_instance(instance: Instance, outfile_path: Union[str, Path]) -> None:
+    """Exports a problem instance to a file."""
+    with open(outfile_path, "w") as outfile:
+        _write_instance(instance, outfile)
+
+
+def _write_instance(instance: Instance, outfile: TextIO) -> None:
+    """Writes a problem instance to a file."""
+    outfile.write("# format: dynamic\n")
+
+    # Write product risk
+    outfile.write(f"{len(instance.products)}\n")
+    for pid in instance.products:
+        outfile.write(f"{pid} {instance.risk[pid]:.2f}\n")
+
+    # Write product degradation rate
+    for pid in instance.products:
+        outfile.write(f"{pid} {instance.degradation_rate(pid):.2f}\n")
+
+    # Write product metabolization matrix
+    for pid in instance.products:
+        outfile.write(f"{pid}")
+        for sid in instance.products:
+            outfile.write(f" {instance.metabolization_rate(pid, sid):.2f}")
+        outfile.write("\n")
+
+    # Write nodes information
+    outfile.write(f"{len(instance.nodes)}\n")
+    for id, data in instance.nodes(data=True):
+        type, Qn, Qc, D = (data["type"], data["Qn"], data["Qc"], data["D"])
+        outfile.write(f"{id} {type} {Qn} {Qc} {D}\n")
+
+    # Write initial concentration
+    outfile.write(f"{len(instance.nodes)}\n")
+    for id in instance.nodes:
+        outfile.write(f"{id}")
+        for pid in instance.products:
+            outfile.write(f" {instance.initial_concentration(id, pid):.2f}")
+        outfile.write("\n")
+
+    T = instance.time_periods[-1]
+    outfile.write(f"{T}\n")

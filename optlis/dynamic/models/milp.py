@@ -19,7 +19,6 @@ def make_lp(instance: Instance):
 
     # Problem data
     TASKS = instance.tasks
-    DURATIONS = instance.durations
     RESOURCES = instance.resources
     T = instance.time_periods[1:]  # discard time unit 0
     PRODUCTS = instance.products
@@ -33,7 +32,7 @@ def make_lp(instance: Instance):
     def cleaning_latest_start_date(i, t):
         """Returns the latest start time for i if i finishes exactly at time t."""
         for s in T:
-            v = max(V[i][p] for p in PRODUCTS)
+            v = max(V(i, p) for p in PRODUCTS)
             tt = s
             while v > EPSILON:
                 v -= CLEANING_SPEED
@@ -47,7 +46,7 @@ def make_lp(instance: Instance):
     def neutralizing_latest_start_date(i, p, t):
         """Returns the latest start time for i if i finishes exactly at time t."""
         for s in T:
-            v = V[i][p]
+            v = V(i, p)
             tt = s
             while v > EPSILON:
                 v -= v * NEUTRALIZING_SPEED
@@ -92,7 +91,7 @@ def make_lp(instance: Instance):
 
     # Sets initial concentration
     for i, p in set_product(TASKS, PRODUCTS):
-        lp += w[i][p][1] == V[i][p]
+        lp += w[i][p][1] == V(i, p)
 
     # Calculates products' metabolization
     for t, i in set_product(T[1:], TASKS):
@@ -130,7 +129,7 @@ def make_lp(instance: Instance):
         time_window = range(cleaning_latest_start_date(i, t) + 1, t + 1)
         lp += (
             plp.lpSum(y[i][tau] for i in TASKS for tau in time_window if tau >= 1)
-            <= RESOURCES["R"]
+            <= RESOURCES["Qc"]
         )
 
     # Neutralizing operation
@@ -158,7 +157,7 @@ def make_lp(instance: Instance):
                 for tau in range(neutralizing_latest_start_date(i, p, t) + 1, t + 1)
                 if tau >= 1
             )
-            <= RESOURCES["N"]
+            <= RESOURCES["Qn"]
         )
 
     # Each site is cleaned no more than one time
@@ -240,7 +239,7 @@ def optimize(
             formatted_value = v.varValue if v.isInteger() else f"{v.varValue:.5f}"
             print(f"{v.name.ljust(lhs_size)} = {formatted_value}")
 
-    # TODO: only write solution with it exists!
+    # TODO: only write solution if it exists!
     if sol_path:
         sol_path = Path(sol_path)
         sol_path.parent.mkdir(parents=True, exist_ok=True)

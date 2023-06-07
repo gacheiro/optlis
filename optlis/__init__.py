@@ -13,6 +13,12 @@ from .generate import generate_instance
 # Top level parser
 parser = argparse.ArgumentParser()
 subparsers = parser.add_subparsers(dest="subcommand", help="choose the subcommand")
+parser.add_argument(
+    "--dynamic",
+    dest="dynamic",
+    action="store_true",
+    help="set the problem type to dynamic",
+)
 
 # Generic solver command line parser (for cplex and ils)
 solver_parser = argparse.ArgumentParser(add_help=False)
@@ -36,12 +42,6 @@ solver_parser.add_argument(
     "--log-path", type=Path, help="path to write the execution log"
 )
 solver_parser.add_argument("--sol-path", type=Path, help="path to write the solution")
-solver_parser.add_argument(
-    "--dynamic",
-    dest="dynamic",
-    action="store_true",
-    help="set the problem type to dynamic",
-)
 
 # CPLEX command parser
 cplex_parser = subparsers.add_parser(
@@ -105,21 +105,24 @@ def main() -> None:
 
     args = vars(parser.parse_args())
 
-    if args["dynamic"]:
-        if args["subcommand"] == "cplex":
-            milp.from_command_line(args)
-        else:
-            raise NotImplementedError
-        return
-
     if args["subcommand"] == "generate":
-        optlis.generate.from_command_line(args)
+        if args["dynamic"]:
+            import optlis.dynamic.instance_benchmark
+            optlis.dynamic.instance_benchmark.from_command_line(args)
+        else:
+            optlis.generate.from_command_line(args)
 
     elif args["subcommand"] == "ils":
-        ils.from_command_line(args)
+        if args["dynamic"]:
+            raise NotImplementedError
+        else:
+            ils.from_command_line(args)
 
     elif args["subcommand"] == "cplex":
-        cplex.from_command_line(args)
+        if args["dynamic"]:
+            milp.from_command_line(args)
+        else:
+            cplex.from_command_line(args)
 
 
 if __name__ == "__main__":
