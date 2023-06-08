@@ -1,7 +1,7 @@
 from pathlib import Path
 from invoke import task, Failure
 
-from optlis.static.utils import load_instance
+from optlis.static.problem_data import load_instance
 from optlis.static.instance_benchmark import generate_benchmark
 from optlis.static.models.ils import show_stats, optimize as ils
 from optlis.static.models.milp import model_1, model_2, optimize as cplex

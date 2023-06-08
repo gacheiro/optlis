@@ -1,6 +1,6 @@
 import pytest
 
-from optlis.dynamic.utils import load_instance
+from optlis.dynamic.problem_data import load_instance
 
 
 @pytest.fixture()

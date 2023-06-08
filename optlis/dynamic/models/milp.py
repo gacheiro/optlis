@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pulp as plp
 
-from optlis.static.utils import export_solution
-from optlis.dynamic.utils import Instance, load_instance
+from optlis.static.problem_data import export_solution
+from optlis.dynamic.problem_data import Instance, load_instance
 
 # Problem constants
 M = 999999

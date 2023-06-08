@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import networkx as nx  # type: ignore
 
-from optlis.static.utils import Instance, export_instance
+from optlis.static.problem_data import Instance, export_instance
 
 
 def generate_instance(

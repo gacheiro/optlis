@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import networkx as nx  # type: ignore
 
-from optlis.dynamic.utils import Instance, export_instance
+from optlis.dynamic.problem_data import Instance, export_instance
 
 
 def _graph(size: Tuple[int, int] = (1, 1), res: Tuple[int, int] = (1, 1)) -> Instance:

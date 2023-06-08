@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pulp as plp  # type: ignore
 
-from optlis.static.utils import Instance, load_instance, export_solution
+from optlis.static.problem_data import Instance, load_instance, export_solution
 
 
 def model_1(instance, relaxation_threshold=0.0):

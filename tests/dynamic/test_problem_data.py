@@ -1,6 +1,6 @@
 from io import StringIO
 
-from optlis.dynamic.utils import _write_instance
+from optlis.dynamic.problem_data import _write_instance
 
 
 def test_export_instance(example_dynamic_instance):

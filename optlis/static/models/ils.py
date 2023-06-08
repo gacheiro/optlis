@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import numpy as np
 import numpy.typing as npt
 
-from optlis.static.utils import Instance, load_instance
+from optlis.static.problem_data import Instance, load_instance
 
 from optlis.static.models.ctypes import (
     c_solution,

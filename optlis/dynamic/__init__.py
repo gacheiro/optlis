@@ -1,1 +1,1 @@
-from optlis.dynamic.utils import Instance, load_instance
+from optlis.dynamic.problem_data import Instance, load_instance

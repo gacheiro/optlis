@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from optlis.static.utils import load_instance, import_solution
+from optlis.static.problem_data import load_instance, import_solution
 
 
 def y_axis(G, sol={}):
