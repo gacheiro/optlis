@@ -3,7 +3,7 @@ from itertools import product as prod
 
 import matplotlib.pyplot as plt
 
-from optlis import import_solution
+from optlis.shared import import_solution
 from optlis.dynamic import load_instance
 
 

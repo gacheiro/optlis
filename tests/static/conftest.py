@@ -1,7 +1,8 @@
 import pytest
 import networkx as nx
 
-from optlis.static.problem_data import load_instance, import_solution, Instance
+from optlis.shared import import_solution
+from optlis.static.problem_data import load_instance, Instance
 
 
 @pytest.fixture(scope="session")

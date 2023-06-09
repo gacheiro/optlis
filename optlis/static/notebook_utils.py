@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
-from optlis.static.problem_data import load_instance, import_solution
+from optlis.shared import import_solution
+from optlis.static.problem_data import load_instance
 
 
 def y_axis(G, sol={}):
@@ -146,44 +147,3 @@ def plot_function(strict, moderate, none):
             axs.plot(x, y)
         ax.set_xlabel("x")
         ax.set_ylabel("y")
-
-
-if __name__ == "__main__":
-    # Prints some stats for two diff instances
-    instance_name = "g_n16_p7_q1_ru"
-    G = load_instance(f"data/instances/{instance_name}.dat")
-    sol1 = import_solution(f"data/solutions/m2/{instance_name}_0.sol")
-    sol2 = import_solution(f"data/solutions/m2/{instance_name}_1.sol")
-
-    # The makespan
-    mks1 = makespan(sol1)
-    mks2 = makespan(sol2)
-    print(f"Makespan 1 = {mks1}\nMakespan 2 = {mks2}")
-
-    # The overall risk
-    overall_risk1 = accumulated_risk(G, sol1)
-    overall_risk2 = accumulated_risk(G, sol2)
-    print(
-        f"\nAccumulated risk 1 = {overall_risk1}\nAccumulated risk 2 = {overall_risk2}"
-    )
-
-    """
-    plot_gantt_diagram(
-        instance_path=f"data/instances/{instance_name}.dat",
-        sol_path=f"data/solutions/m1/{instance_name}_0.sol",
-    )
-
-    plot_gantt_diagram(
-        instance_path=f"data/instances/{instance_name}.dat",
-        sol_path=f"data/solutions/m1/{instance_name}_1.sol",
-    )
-    """
-
-    plot_accumulated_risk(
-        instance_path=f"data/instances/{instance_name}.dat",
-        sol_paths=[
-            f"data/solutions/m1/{instance_name}_1.sol",
-            f"data/solutions/m1/{instance_name}_0.sol",
-        ],
-        labels=["$f_{1}$", "$f_{0}$"],
-    )
