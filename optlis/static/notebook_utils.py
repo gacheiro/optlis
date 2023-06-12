@@ -14,7 +14,9 @@ def y_axis(G, sol={}):
     for plotting a solution."""
     dest = G.tasks
     r = nx.get_node_attributes(G, "r")
-    cdf = lambda i: sol.get(f"cd_{i}") or sol.get(f"C_{i}") # compatibility between two tipes of solution formats
+    cdf = lambda i: sol.get(f"cd_{i}") or sol.get(
+        f"C_{i}"
+    )  # compatibility between two tipes of solution formats
     cd = {i: cdf(i) for i in dest}
     if None in cd.values():
         print(cd.values())

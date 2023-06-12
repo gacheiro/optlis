@@ -106,7 +106,7 @@ def main() -> None:
 
     elif args["subcommand"] == "ils":
         if args["dynamic"]:
-            raise NotImplementedError
+            optlis.dynamic.models.ils.from_command_line(args)
         else:
             optlis.static.models.ils.from_command_line(args)
 

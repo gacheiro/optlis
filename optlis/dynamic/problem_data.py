@@ -1,13 +1,21 @@
 from typing import Any, Dict, Union, Generator, Tuple, TextIO, Optional
 from pathlib import Path
+from functools import cached_property
 
 import networkx as nx
 import numpy as np
+import numpy.typing as npt
 
+from optlis.shared import set_product
 from optlis.static.problem_data import Instance as StaticInstance
 
 
 class Instance(StaticInstance):
+
+    EPSILON = 0.01
+    CLEANING_SPEED = 0.15
+    NEUTRALIZING_SPEED = 0.2
+
     def __init__(
         self, nodes, risk, degradation_rate, metabolization_rate, initial_concentration
     ):
@@ -19,23 +27,83 @@ class Instance(StaticInstance):
         self._initial_concentration = initial_concentration
 
     @property
+    def node_resources(self):
+        raise DeprecationWarning
+
+    @property
     def resources(self):
         return dict(
             Qn=sum(nx.get_node_attributes(self, "Qn").values()),
             Qc=sum(nx.get_node_attributes(self, "Qc").values()),
         )
 
-    @property
-    def durations(self):
-        return list(nx.get_node_attributes(self, "p").values())
+    # TODO: rename this
+    @cached_property
+    def nodes_duration(self):
+        duration = np.zeros((len(self.nodes), len(self.time_periods)), dtype=np.int32)
+        for i in self.nodes:
+            for t in self.time_periods:
+                duration[i][t] = self.cleaning_duration(i, t)
+        return duration
 
-    @property
+    # def cleaning_duration(self, site, time):
+    #     """Returns the latest start time for an op. if it finishes exactly at time t."""
+    #     for s in self.time_periods:
+    #         v = max(self.initial_concentration(site, p) for p in self.products)
+    #         tt = s
+    #         while v > self.EPSILON:
+    #             v -= self.CLEANING_SPEED
+    #             tt += 1
+    #         else:
+    #             if tt == time:
+    #                 return s
+    #     return 1
+
+    # TODO: rename this
+    @cached_property
+    def cleaning_duration(self):
+        nnodes, ntime_units = (len(self.nodes), len(self.time_units))
+        nodes_duration = np.zeros(shape=(nnodes, ntime_units), dtype=np.int32)
+        for i, t in set_product(self.nodes, self.time_units):
+            nodes_duration[i][t] = self._cleaning_duration(i, t)
+
+        return nodes_duration
+
+    def _cleaning_duration(self, site, time):
+        """Returns the latest start time for an op. if it finishes exactly at time t.
+           If it is not possible for the task to finish exactly at time t, returns 0.
+        """
+        for s in self.time_units:
+            v = max(self.initial_concentration(site, p) for p in self.products)
+            tt = s
+            while v > self.EPSILON:
+                v -= self.CLEANING_SPEED
+                tt += 1
+            else:
+                if tt == time:
+                    return s
+        return 0
+
+    def neutralizing_duration(self, site, product, time):
+        """Returns the latest start time for an op. if it finishes exactly at time t."""
+        for s in self.time_units:
+            v = self.initial_concentration(site, product)
+            tt = s
+            while v > self.EPSILON:
+                v -= v * self.NEUTRALIZING_SPEED
+                tt += 1
+            else:
+                if tt == time:
+                    return s
+        return 1
+
+    @cached_property
     def risk(self):
-        try:
-            # TODO: deprecate this in favor of the later
-            return dict(self._risk)
-        except TypeError:
-            return np.array(self._risk, dtype=np.float64)
+        raise DeprecationWarning
+
+    @cached_property
+    def products_risk(self):
+        return np.array(self._risk, dtype=np.float64)
 
     @property
     def products(self):
@@ -45,8 +113,12 @@ class Instance(StaticInstance):
     def initial_concentration(self, i, p):
         return self._initial_concentration[i][p]
 
+    @cached_property
+    def degradation_rates(self):
+        return np.array(self._degradation_rate, dtype=np.float64)
+    
     def degradation_rate(self, p):
-        return self._degradation_rate[p]
+        raise DeprecationWarning
 
     def metabolization_rate(self, p, q):
         try:
@@ -56,15 +128,32 @@ class Instance(StaticInstance):
             return self._metabolization_rate.get((p, q), 0)
 
     @property
-    def time_periods(self):
+    def time_units(self):
         return np.array(range(102))
+
+    @property
+    def time_periods(self):
+        raise DeprecationWarning
+
+    def c_struct(self) -> "c_instance":
+        return c_instance(
+            c_size_t(len(self.nodes)),
+            c_size_t(len(self.tasks)),
+            c_size_t(len(self.products)),
+            c_size_t(self.resources["Qc"]),
+            c_size_t(len(self.time_units)),
+            self.tasks.ctypes.data_as(POINTER(c_int32)),
+            self.cleaning_duration.ctypes.data_as(POINTER(c_int32)),
+            self.products_risk.ctypes.data_as(POINTER(c_double)),
+            self.degradation_rates.ctypes.data_as(POINTER(c_double)),
+        )
 
 
 def load_instance(path):
     """Loads an instance from a file."""
     nodes = []
-    risk = {}
-    degradation_rate = {}
+    risk = []
+    degradation_rate = []
     metabolization_rate = {}
     initial_concentration = {}
 
@@ -80,13 +169,13 @@ def load_instance(path):
     for _ in range(nproducts):
         line = next(instance_data)
         id_, risk_ = line.split()
-        risk[int(id_)] = float(risk_)
+        risk.append(float(risk_))
 
     # Parses products' degradation rate
     for _ in range(nproducts):
         line = next(instance_data)
         id_, degradation_rate_ = line.split()
-        degradation_rate[int(id_)] = float(degradation_rate_)
+        degradation_rate.append(float(degradation_rate_))
 
     # Parses products'
     for _ in range(nproducts):
@@ -168,3 +257,12 @@ def _write_instance(instance: Instance, outfile: TextIO) -> None:
 
     T = instance.time_periods[-1]
     outfile.write(f"{T}\n")
+
+
+from optlis.dynamic.models.ctypes import (
+    c_instance,
+    c_int32,
+    c_size_t,
+    c_double,
+    POINTER,
+)
