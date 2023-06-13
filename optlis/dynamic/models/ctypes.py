@@ -6,12 +6,13 @@ class c_instance(Structure):
         ("nnodes", c_size_t),
         ("ntasks", c_size_t),
         ("nproducts", c_size_t),
-        ("nresources", c_size_t),
         ("ntime_units", c_size_t),
+        ("nresources", POINTER(c_int32)),
         ("tasks", POINTER(c_int32)),
-        ("nodes_duration", POINTER(c_int32)),
+        ("cleaning_start_times", POINTER(c_int32)),
         ("products_risk", POINTER(c_double)),
-        ("degrataion_rates", POINTER(c_double)),
+        ("degradation_rates", POINTER(c_double)),
+        ("metabolizing_rates", POINTER(c_double)),
     ]
 
 

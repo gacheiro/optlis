@@ -46,32 +46,19 @@ class Instance(StaticInstance):
                 duration[i][t] = self.cleaning_duration(i, t)
         return duration
 
-    # def cleaning_duration(self, site, time):
-    #     """Returns the latest start time for an op. if it finishes exactly at time t."""
-    #     for s in self.time_periods:
-    #         v = max(self.initial_concentration(site, p) for p in self.products)
-    #         tt = s
-    #         while v > self.EPSILON:
-    #             v -= self.CLEANING_SPEED
-    #             tt += 1
-    #         else:
-    #             if tt == time:
-    #                 return s
-    #     return 1
-
-    # TODO: rename this
     @cached_property
-    def cleaning_duration(self):
+    def cleaning_start_times(self):
+        """Returns a 3d vector with the latest start times."""
         nnodes, ntime_units = (len(self.nodes), len(self.time_units))
         nodes_duration = np.zeros(shape=(nnodes, ntime_units), dtype=np.int32)
         for i, t in set_product(self.nodes, self.time_units):
-            nodes_duration[i][t] = self._cleaning_duration(i, t)
+            nodes_duration[i][t] = self._cleaning_start_times(i, t)
 
         return nodes_duration
 
-    def _cleaning_duration(self, site, time):
+    def _cleaning_start_times(self, site, time):
         """Returns the latest start time for an op. if it finishes exactly at time t.
-           If it is not possible for the task to finish exactly at time t, returns 0.
+        If it is not possible for the task to finish exactly at time t, returns 0.
         """
         for s in self.time_units:
             v = max(self.initial_concentration(site, p) for p in self.products)
@@ -116,20 +103,26 @@ class Instance(StaticInstance):
     @cached_property
     def degradation_rates(self):
         return np.array(self._degradation_rate, dtype=np.float64)
-    
+
     def degradation_rate(self, p):
         raise DeprecationWarning
 
     def metabolization_rate(self, p, q):
-        try:
-            # TODO: deprecate this in favor of the later
-            return self._metabolization_rate[p][q]
-        except KeyError:
-            return self._metabolization_rate.get((p, q), 0)
+        raise DeprecationWarning
+
+    @cached_property
+    def metabolizing_rates(self):
+        nproducts = len(self.products)
+        rates = np.zeros(shape=(nproducts, nproducts), dtype=np.float64)
+
+        for (p, q) in set_product(self.products, self.products):
+            rates[p][q] = self._metabolization_rate[p][q]
+
+        return rates
 
     @property
     def time_units(self):
-        return np.array(range(102))
+        return np.array(range(11), dtype=np.int32)
 
     @property
     def time_periods(self):
@@ -140,12 +133,13 @@ class Instance(StaticInstance):
             c_size_t(len(self.nodes)),
             c_size_t(len(self.tasks)),
             c_size_t(len(self.products)),
-            c_size_t(self.resources["Qc"]),
             c_size_t(len(self.time_units)),
+            np.array([self.resources["Qn"], self.resources["Qc"]], dtype=np.int32).ctypes.data_as(POINTER(c_int32)),
             self.tasks.ctypes.data_as(POINTER(c_int32)),
-            self.cleaning_duration.ctypes.data_as(POINTER(c_int32)),
+            self.cleaning_start_times.ctypes.data_as(POINTER(c_int32)),
             self.products_risk.ctypes.data_as(POINTER(c_double)),
             self.degradation_rates.ctypes.data_as(POINTER(c_double)),
+            self.metabolizing_rates.ctypes.data_as(POINTER(c_double)),
         )
 
 

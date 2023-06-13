@@ -11,12 +11,12 @@
 2 0.0
 # id transformation_rate (n x n)
 0 0.0 0.0 0.0
-1 0.0 0.0 0.0
+1 0.0 0.0 0.01
 2 0.0 0.0 0.0
 # The number of nodes
 3
 # id type K_n K_c d 
-0 0 0 1 0
+0 0 1 1 0
 1 1 0 0 20
 2 1 0 0 20
 # The concentration of each product on each node

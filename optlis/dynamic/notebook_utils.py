@@ -12,7 +12,7 @@ MAKESPAN = 100
 
 def _risk_at_time(inst, sol, t):
     tasks = inst.tasks
-    risk = inst.risk
+    risk = inst.products_risk
     products = inst.products
     return sum(sol.get(f"w_{i}_{p}_{t}", 0) * risk[p] for i, p in prod(tasks, products))
 

@@ -7,16 +7,16 @@
 2 0.5
 # id degradation rate
 0 0.0
-1 0.02
+1 0.0
 2 0.0
 # id transformation_rate (n x n)
 0 0.0 0.0 0.0
-1 0.0 0.0 0.0
+1 0.0 0.0 0.02
 2 0.0 0.0 0.0
 # The number of nodes
 2
 # id type K_n K_c d 
-0 0 0 1 0
+0 0 1 0 0
 1 1 0 0 20
 # The concentration of each product on each node
 2
