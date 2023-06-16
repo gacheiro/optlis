@@ -74,23 +74,29 @@ def overall_risk(G, sol={}):
     return acc_risk
 
 
-def plot_gantt_diagram(instance_path, sol_path):
+def plot_gantt_diagram(instance_path, sol_path, figsize=(8, 8)):
     """Plots the grantt diagram for a given instance and solution."""
     inst, sol = (load_instance(instance_path), import_solution(sol_path))
 
     plt.rcdefaults()
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=figsize)
 
-    jobs = sorted(inst.tasks, key=lambda x: inst.nodes[x]["r"], reverse=True)
-    start_dates = [sol.get(f"sd_{j}") for j in jobs]
+    jobs = sorted(inst.tasks, key=lambda x: inst.nodes[x]["r"])
+    sdf = lambda i: sol.get(f"sd_{i}") or sol.get(
+        f"S_{i}", 0
+    )  # compatibility between two tipes of solution formats
+
+    start_dates = [sdf(j) for j in jobs]
+
     durations = [inst.nodes[j]["p"] for j in jobs]
     y_pos = np.arange(len(jobs))
 
     ax.barh(y_pos, durations, left=start_dates, align="center")
     ax.set_yticks(y_pos)
-    ax.set_yticklabels(jobs)
-    ax.invert_yaxis()  # labels read top-to-bottom
-    ax.set_xlabel("time")
+    ax.set_yticklabels(sorted([inst.nodes[i]["r"] for i in jobs]))
+    # ax.invert_yaxis()  # labels read top-to-bottom
+    ax.set_ylabel("Task risk")
+    ax.set_xlabel("Time unit")
     ax.grid(True)
     plt.show()
 
@@ -124,7 +130,7 @@ def plot_task_policies(instance, sol, figsize=(18, 6)):
     """
     tasks = instance.tasks
     sp = dict(nx.shortest_path_length(instance))
-    xs = [
+    ys = [
         np.array(x)
         for x in (
             [instance.nodes[i]["r"] for i in tasks],
@@ -132,12 +138,16 @@ def plot_task_policies(instance, sol, figsize=(18, 6)):
             [sp[0][i] for i in tasks],
         )
     ]
-    y = np.array([sol.get(f"cd_{i}", 0) for i in tasks])
-    x_labels = ("risk", "duration", "distance from depot")
-    y_label = "completion time"
+    y_labels = ("Task risk", "Task duration", "Distance between task and depot")
 
-    fig, axs = plt.subplots(ncols=len(xs), figsize=figsize)
-    for ax, x, x_label in zip(axs, xs, x_labels):
+    cdf = lambda i: sol.get(f"cd_{i}") or sol.get(
+        f"C_{i}"
+    )  # compatibility between two tipes of solution formats
+    x = np.array([cdf(i) for i in tasks])
+    x_label = "Completion time"
+
+    fig, axs = plt.subplots(ncols=len(ys), figsize=figsize)
+    for ax, y, y_label in zip(axs, ys, y_labels):
         plot_points_with_best_fit_line(ax, x, y, labels=[x_label, y_label])
 
 
