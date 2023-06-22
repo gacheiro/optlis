@@ -15,8 +15,8 @@
 2 0.0 0.0 0.0
 # The number of nodes
 2
-# id type K_n K_c d 
-0 0 1 0 0
+# id type K_n K_c d
+0 0 1 1 0
 1 1 0 0 20
 # The concentration of each product on each node
 2

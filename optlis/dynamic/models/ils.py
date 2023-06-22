@@ -14,6 +14,7 @@ from optlis.shared import set_product
 from optlis.dynamic.problem_data import Instance, load_instance
 
 from optlis.dynamic.models.ctypes import (
+    c_task,
     c_solution,
     c_budget,
     c_int32,
@@ -57,7 +58,7 @@ class Solution:
     ):
 
         self.instance = instance
-        self.task_list = np.array(task_list, dtype=np.int32)
+        self.task_list = np.array(task_list)
         if nodes_concentration is None:
             self.nodes_concentration = np.zeros(
                 (len(instance.nodes), len(instance.products), len(instance.time_units)),
@@ -99,7 +100,7 @@ class Solution:
     def c_struct(self) -> c_solution:
         return c_solution(
             c_size_t(len(self.task_list)),
-            self.task_list.ctypes.data_as(POINTER(c_int32)),
+            self.task_list.ctypes.data_as(POINTER(c_task)),
             self.nodes_concentration.ctypes.data_as(POINTER(c_double)),
             c_double(self.objective),
             c_int32(self.consumed_budget),
@@ -136,8 +137,12 @@ def show_stats(results: List[Tuple[Solution, int, float]]) -> None:
 
 def construct_solution(instance: Instance) -> Solution:
     """Builds an initial feasible solution."""
-    task_list: npt.NDArray[np.int32] = np.array(instance.tasks, dtype=np.int32)
-    return Solution(instance, task_list)
+    sorted_nodes: npt.NDArray[np.int32] = np.array(instance.tasks, dtype=np.int32)
+    # tasks = np.array([(1, i, 0) for i in sorted_nodes],
+    #                   dtype=[("type", "i"), ("site", "i"), ("target", "i")])
+    tasks = np.array([(0, 1, 1), (1, 1, 0)], dtype=[("type", "i"), ("site", "i"), ("target", "i")])
+    # tasks = np.array([(0, 2, 1), (1, 1, -1), (1, 2, -1)], dtype=[("type", "i"), ("site", "i"), ("target", "i")])
+    return Solution(instance, tasks)
 
 
 def perturbate(

@@ -13,8 +13,8 @@ from optlis.static.problem_data import Instance as StaticInstance
 class Instance(StaticInstance):
 
     EPSILON = 0.01
-    CLEANING_SPEED = 0.15
-    NEUTRALIZING_SPEED = 0.2
+    NEUTRALIZING_SPEED = 0.3
+    CLEANING_SPEED = 0.075
 
     def __init__(
         self, nodes, risk, degradation_rate, metabolization_rate, initial_concentration
@@ -48,7 +48,7 @@ class Instance(StaticInstance):
 
     @cached_property
     def cleaning_start_times(self):
-        """Returns a 3d vector with the latest start times."""
+        """Returns a 2d vector with the latest start times."""
         nnodes, ntime_units = (len(self.nodes), len(self.time_units))
         nodes_duration = np.zeros(shape=(nnodes, ntime_units), dtype=np.int32)
         for i, t in set_product(self.nodes, self.time_units):
@@ -71,7 +71,19 @@ class Instance(StaticInstance):
                     return s
         return 0
 
-    def neutralizing_duration(self, site, product, time):
+    @cached_property
+    def neutralizing_start_times(self):
+        """Returns a 3d vector with the latest start times."""
+        nnodes, nproducts, ntime_units = (len(self.nodes),
+                                          len(self.products),
+                                          len(self.time_units))
+        duration = np.zeros(shape=(nnodes, nproducts, ntime_units), dtype=np.int32)
+        for i, p, t in set_product(self.nodes, self.products, self.time_units):
+            duration[i][p][t] = self._neutralizing_duration(i, p, t)
+
+        return duration
+
+    def _neutralizing_duration(self, site, product, time):
         """Returns the latest start time for an op. if it finishes exactly at time t."""
         for s in self.time_units:
             v = self.initial_concentration(site, product)
@@ -82,7 +94,7 @@ class Instance(StaticInstance):
             else:
                 if tt == time:
                     return s
-        return 1
+        return 0
 
     @cached_property
     def risk(self):
@@ -120,23 +132,29 @@ class Instance(StaticInstance):
 
         return rates
 
-    @property
+    @cached_property
     def time_units(self):
-        return np.array(range(11), dtype=np.int32)
+        return np.array(range(25), dtype=np.int32)
 
     @property
     def time_periods(self):
         raise DeprecationWarning
 
     def c_struct(self) -> "c_instance":
+        nnodes = len(self.nodes)
+        ntasks = len(self.tasks)
+        nproducts = len(self.products)
+        ntime_units = len(self.time_units)
+
         return c_instance(
-            c_size_t(len(self.nodes)),
-            c_size_t(len(self.tasks)),
-            c_size_t(len(self.products)),
-            c_size_t(len(self.time_units)),
+            c_size_t(nnodes),
+            c_size_t(ntasks),
+            c_size_t(nproducts),
+            c_size_t(ntime_units),
             np.array([self.resources["Qn"], self.resources["Qc"]], dtype=np.int32).ctypes.data_as(POINTER(c_int32)),
             self.tasks.ctypes.data_as(POINTER(c_int32)),
             self.cleaning_start_times.ctypes.data_as(POINTER(c_int32)),
+            self.neutralizing_start_times.ctypes.data_as(POINTER(c_int32)),
             self.products_risk.ctypes.data_as(POINTER(c_double)),
             self.degradation_rates.ctypes.data_as(POINTER(c_double)),
             self.metabolizing_rates.ctypes.data_as(POINTER(c_double)),
@@ -222,17 +240,17 @@ def _write_instance(instance: Instance, outfile: TextIO) -> None:
     # Write product risk
     outfile.write(f"{len(instance.products)}\n")
     for pid in instance.products:
-        outfile.write(f"{pid} {instance.risk[pid]:.2f}\n")
+        outfile.write(f"{pid} {instance.products_risk[pid]:.2f}\n")
 
     # Write product degradation rate
     for pid in instance.products:
-        outfile.write(f"{pid} {instance.degradation_rate(pid):.2f}\n")
+        outfile.write(f"{pid} {instance.degradation_rates[pid]:.2f}\n")
 
     # Write product metabolization matrix
     for pid in instance.products:
         outfile.write(f"{pid}")
         for sid in instance.products:
-            outfile.write(f" {instance.metabolization_rate(pid, sid):.2f}")
+            outfile.write(f" {instance.metabolizing_rates[pid][sid]:.2f}")
         outfile.write("\n")
 
     # Write nodes information
@@ -249,7 +267,7 @@ def _write_instance(instance: Instance, outfile: TextIO) -> None:
             outfile.write(f" {instance.initial_concentration(id, pid):.2f}")
         outfile.write("\n")
 
-    T = instance.time_periods[-1]
+    T = instance.time_units[-1]
     outfile.write(f"{T}\n")
 
 

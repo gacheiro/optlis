@@ -23,11 +23,12 @@ def make_lp(instance: Instance):
     CLEANING_SPEED = instance.CLEANING_SPEED
     NEUTRALIZING_SPEED = instance.NEUTRALIZING_SPEED
     CLEANING_START_TIMES = instance.cleaning_start_times
+    NEUTRALIZING_START_TIMES = instance.neutralizing_start_times
 
     # Defines aliases for some methods
     dr = lambda p: instance.degradation_rates[p]
     mr = lambda p, q: instance.metabolizing_rates[p][q]
-    nd = instance.neutralizing_duration
+    # nd = instance.neutralizing_duration
 
     # Creates the model's variables
     global_risk = plp.LpVariable("global_risk", lowBound=0, cat=plp.LpContinuous)
@@ -94,7 +95,7 @@ def make_lp(instance: Instance):
 
     # Resource constraints (cleaning operation)
     for t in T:
-        time_window = range(CLEANING_START_TIMES[i][t], t)
+        time_window = range(CLEANING_START_TIMES[i][t], t + 1)
         lp += (
             plp.lpSum(y[i][tau] for i in TASKS for tau in time_window)
             <= RESOURCES["Qc"]
@@ -104,7 +105,7 @@ def make_lp(instance: Instance):
     for i, p, t in set_product(TASKS, PRODUCTS, T[1:]):
 
         # Checks wether a neutralizing operation is active
-        time_window = range(nd(i, p, t), t + 1)
+        time_window = range(NEUTRALIZING_START_TIMES[i][p][t], t + 1)
         is_active = plp.lpSum(x[i][p][tau] for tau in time_window)
 
         lp += q[i][p][0][t] >= 0
@@ -122,7 +123,7 @@ def make_lp(instance: Instance):
                 x[i][p][tau]
                 for i in TASKS
                 for p in PRODUCTS
-                for tau in range(nd(i, p, t), t)
+                for tau in range(NEUTRALIZING_START_TIMES[i][p][t], t + 1)
             )
             <= RESOURCES["Qn"]
         )
@@ -143,20 +144,26 @@ def make_lp(instance: Instance):
         neutralizing = plp.lpSum(
             x[i][p][tau]
             for p in PRODUCTS
-            for tau in range(nd(i, p, t), t + 1)
+            for tau in range(NEUTRALIZING_START_TIMES[i][p][t], t + 1)
         )
 
         lp += cleaning + neutralizing <= 1
 
     # (test only) hardcode on-site ops
     # lp += x[1][1][1] == 1
-    # lp += q[1][1][0][1] >= 0.1
     lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 1
 
     # (test only) hardcode on-site ops
     # lp += y[1][1] == 1
     # lp += r[1][1][1] == 0.15
-    lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 0
+    lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 1
+
+    # (bug) avoid operations when there's no resource
+    if RESOURCES["Qn"] == 0:
+        lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 0
+
+    if RESOURCES["Qc"] == 0:
+        lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 0
 
     # (test only) disable operations at t = 0
     for i in TASKS:
