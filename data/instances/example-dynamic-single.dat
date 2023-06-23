@@ -7,11 +7,11 @@
 2 0.5
 # id degradation rate
 0 0.0
-1 0.0
-2 0.0
+1 0.01
+2 0.02
 # id transformation_rate (n x n)
 0 0.0 0.0 0.0
-1 0.0 0.0 0.02
+1 0.0 0.0 0.05
 2 0.0 0.0 0.0
 # The number of nodes
 2

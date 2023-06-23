@@ -84,6 +84,7 @@ bool try_improve_solution(const struct instance *inst, struct solution *sol,
 void local_search(const struct instance *inst, struct solution *sol,
                   struct budget *budget) {
   calculate_schedule(inst, sol);
+  while (try_improve_solution(inst, sol, budget));
   print_info(inst, sol, budget);
 }
 
@@ -96,7 +97,8 @@ void print_info(const struct instance *inst, const struct solution *sol,
 
   printf("\nTask list:\n");
   for (size_t i = 0; i < sol->ntasks; ++i)
-    printf("(%d %d %d) ", sol->task_list[i].type, sol->task_list[i].site, sol->task_list[i].target);
+    printf("(%d %d %d) ", sol->task_list[i].type, sol->task_list[i].site,
+           sol->task_list[i].target);
   printf("\n");
 
   printf("\nDegradation rates:\n");
@@ -137,23 +139,23 @@ double overall_risk(size_t nnodes, size_t nproducts, size_t ntime_units,
     for (size_t p = 0; p < nproducts; ++p) {
       // log = nodes_concentration[ntime_units * (p + nproducts * i)] > 0 ? 1 :
       // 0;
-      log = 0;
-      if (log)
-        printf("[p = %ld] ", p);
+      // log = 0;
+      // if (log)
+      //   printf("[p = %ld] ", p);
       for (size_t t = 0; t < ntime_units; ++t) {
         // https://stackoverflow.com/questions/7367770/how-to-flatten-or-index-3d-array-in-1d-array
         value += products_risk[p] *
                  nodes_concentration[t + ntime_units * (p + nproducts * i)];
-        if (log)
-          printf("[%ld]%.2lf ", t,
-                 nodes_concentration[t + ntime_units * (p + nproducts * i)]);
+        // if (log)
+        //   printf("[%ld]%.2lf ", t,
+        //          nodes_concentration[t + ntime_units * (p + nproducts * i)]);
       }
       value += node_risk;
-      if (log)
-        printf("\n");
+      // if (log)
+      //   printf("\n");
     }
-    if (log)
-      printf("\n");
+    // if (log)
+    //   printf("\n");
   }
 
   return value;
@@ -203,9 +205,6 @@ void metabolizing_scheme(const struct instance *inst, struct solution *sol,
             amount;
         sol->nodes_concentration[t + ntime_units * (q + nproducts * i)] +=
             amount;
-
-        // if (amount > 0)
-        //   printf("q_%ld_%ld_%ld_%ld = %lf\n", i, p, q, t, amount);
       }
     }
   }
@@ -224,8 +223,6 @@ void neutralizing_scheme(const struct instance *inst, struct solution *sol,
 
   sol->nodes_concentration[t + ntime_units * (p + nproducts * i)] -= amount;
   sol->nodes_concentration[t + ntime_units * (0 + nproducts * i)] += amount;
-
-  // printf("q_1_1_0_%ld = %lf\n", t, amount);
 }
 
 void cleaning_scheme(const struct instance *inst, struct solution *sol,
@@ -242,23 +239,7 @@ void cleaning_scheme(const struct instance *inst, struct solution *sol,
   }
 }
 
-// double calculate_schedule(const struct instance *inst, struct solution *sol) {
-
-//   for (size_t time_unit = 1; time_unit < inst->ntime_units; ++time_unit) {
-//     degradation_scheme(inst, sol, time_unit);
-//     metabolizing_scheme(inst, sol, time_unit);
-//     neutralizing_scheme(inst, sol, 1, 1, time_unit);
-//   }
-
-//   sol->objective =
-//       overall_risk(inst->nnodes, inst->nproducts, inst->ntime_units,
-//                    inst->products_risk, sol->nodes_concentration);
-
-//   return sol->objective;
-// }
-
-double calculate_schedule(const struct instance *inst, struct solution *sol)
-{
+double calculate_schedule(const struct instance *inst, struct solution *sol) {
 
   // NOTE: assumes the only depot is node 0 and the max number of resources
   // is 64
@@ -289,11 +270,16 @@ double calculate_schedule(const struct instance *inst, struct solution *sol)
       if (curr_task != NULL) {
 
         // Gets the start time of the current task, if it just completed
-        start_time = inst->neutralizing_start_times[t + ntime_units * (curr_task->target + inst->nproducts * curr_task->site)];
+        start_time =
+            inst->neutralizing_start_times[t +
+                                           ntime_units * (curr_task->target +
+                                                          inst->nproducts *
+                                                              curr_task->site)];
 
         // If resource's current task is not yet complete
         if (neutralizing_start_times[k] >= start_time) {
-          printf("Resource %ldn is working on (%d, %d, %d) at %ld\n", k, curr_task->type, curr_task->site, curr_task->target, t);
+          // printf("Resource %ldn is working on (%d, %d, %d) at %ld\n", k,
+          // curr_task->type, curr_task->site, curr_task->target, t);
           neutralizing_scheme(inst, sol, curr_task->site, curr_task->target, t);
           continue;
         }
@@ -307,7 +293,7 @@ double calculate_schedule(const struct instance *inst, struct solution *sol)
 
       // This resource is free and can start the next task
       if (task != NULL && task->type == 0 && !active_sites[task->site]) {
-        printf("x_%d_%d_%ld = 1\n", task->site, task->target, t);
+        // printf("x_%d_%d_%ld = 1\n", task->site, task->target, t);
 
         active_sites[task->site] = true;
         neutralizing_resources[k] = task;
@@ -329,11 +315,13 @@ double calculate_schedule(const struct instance *inst, struct solution *sol)
       if (curr_task != NULL) {
 
         // Gets the start time of the current task, if it just completed
-        start_time = inst->cleaning_start_times[curr_task->site*ntime_units + t];
+        start_time =
+            inst->cleaning_start_times[curr_task->site * ntime_units + t];
 
         // If resource's current task is not yet complete
         if (cleaning_start_times[k] >= start_time) {
-          printf("Resource %ldc is working on (%d, %d, %d) at %ld\n", k, curr_task->type, curr_task->site, curr_task->target, t);
+          // printf("Resource %ldc is working on (%d, %d, %d) at %ld\n", k,
+          // curr_task->type, curr_task->site, curr_task->target, t);
           cleaning_scheme(inst, sol, curr_task->site, t);
           continue;
         }
@@ -348,7 +336,7 @@ double calculate_schedule(const struct instance *inst, struct solution *sol)
       // This resource is free and can start the next task
       if (task != NULL && task->type == 1 && !active_sites[task->site]) {
 
-        printf("y_%d_%ld = 1\n", task->site, t);
+        // printf("y_%d_%ld = 1\n", task->site, t);
 
         active_sites[task->site] = true;
         cleaning_resources[k] = task;
@@ -362,13 +350,9 @@ double calculate_schedule(const struct instance *inst, struct solution *sol)
     }
   }
 
-  sol->objective = overall_risk(
-    inst->nnodes,
-    inst->nproducts,
-    inst->ntime_units,
-    inst->products_risk,
-    sol->nodes_concentration
-  );
+  sol->objective =
+      overall_risk(inst->nnodes, inst->nproducts, inst->ntime_units,
+                   inst->products_risk, sol->nodes_concentration);
 
   return sol->objective;
 }

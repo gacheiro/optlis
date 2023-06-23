@@ -51,7 +51,7 @@ class Solution:
     def __init__(
         self,
         instance: Instance,
-        task_list: npt.NDArray[np.int32],
+        task_list: npt.NDArray[Any],
         nodes_concentration: Optional[npt.NDArray[Any]] = None,
         objective: float = float("inf"),
         consumed_budget: int = 1,
@@ -107,6 +107,11 @@ class Solution:
         )
 
 
+def create_task_list(tasks: List[Tuple[int, int, int]]):
+    """Returns a numpy array with the corret types (for correct communication with the c code)."""
+    return np.array(tasks, dtype=[("type", "i"), ("site", "i"), ("target", "i")])
+
+
 def show_stats(results: List[Tuple[Solution, int, float]]) -> None:
     solutions = [r[0] for r in results]
     objectives = [s.objective for s in solutions]
@@ -137,12 +142,11 @@ def show_stats(results: List[Tuple[Solution, int, float]]) -> None:
 
 def construct_solution(instance: Instance) -> Solution:
     """Builds an initial feasible solution."""
-    sorted_nodes: npt.NDArray[np.int32] = np.array(instance.tasks, dtype=np.int32)
-    # tasks = np.array([(1, i, 0) for i in sorted_nodes],
-    #                   dtype=[("type", "i"), ("site", "i"), ("target", "i")])
-    tasks = np.array([(0, 1, 1), (1, 1, 0)], dtype=[("type", "i"), ("site", "i"), ("target", "i")])
-    # tasks = np.array([(0, 2, 1), (1, 1, -1), (1, 2, -1)], dtype=[("type", "i"), ("site", "i"), ("target", "i")])
-    return Solution(instance, tasks)
+    sorted_tasks: npt.NDArray[np.int32] = np.array(instance.tasks, dtype=np.int32)
+
+    # Creates a `cleaning` task for each unsafe site
+    task_list = create_task_list([(1, i, 0) for i in sorted_tasks])
+    return Solution(instance, task_list)
 
 
 def perturbate(
@@ -165,6 +169,7 @@ def ils(
     seed: int = 0,
 ) -> Tuple[Solution, int, float]:
     """Runs ILS optimization loop."""
+    evaluations = evaluations or np.iinfo(np.int32).max
     initial_solution = construct_solution(instance)
     # start_time = time.time()
     # rng = np.random.default_rng(seed)

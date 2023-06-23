@@ -74,9 +74,11 @@ class Instance(StaticInstance):
     @cached_property
     def neutralizing_start_times(self):
         """Returns a 3d vector with the latest start times."""
-        nnodes, nproducts, ntime_units = (len(self.nodes),
-                                          len(self.products),
-                                          len(self.time_units))
+        nnodes, nproducts, ntime_units = (
+            len(self.nodes),
+            len(self.products),
+            len(self.time_units),
+        )
         duration = np.zeros(shape=(nnodes, nproducts, ntime_units), dtype=np.int32)
         for i, p, t in set_product(self.nodes, self.products, self.time_units):
             duration[i][p][t] = self._neutralizing_duration(i, p, t)
@@ -134,7 +136,7 @@ class Instance(StaticInstance):
 
     @cached_property
     def time_units(self):
-        return np.array(range(25), dtype=np.int32)
+        return np.array(range(101), dtype=np.int32)
 
     @property
     def time_periods(self):
@@ -151,7 +153,9 @@ class Instance(StaticInstance):
             c_size_t(ntasks),
             c_size_t(nproducts),
             c_size_t(ntime_units),
-            np.array([self.resources["Qn"], self.resources["Qc"]], dtype=np.int32).ctypes.data_as(POINTER(c_int32)),
+            np.array(
+                [self.resources["Qn"], self.resources["Qc"]], dtype=np.int32
+            ).ctypes.data_as(POINTER(c_int32)),
             self.tasks.ctypes.data_as(POINTER(c_int32)),
             self.cleaning_start_times.ctypes.data_as(POINTER(c_int32)),
             self.neutralizing_start_times.ctypes.data_as(POINTER(c_int32)),

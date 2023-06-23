@@ -2,27 +2,31 @@
 # The number of products
 3
 # id risk
-0 0.2
+0 0.1
 1 0.8
 2 0.5
 # id degradation rate
-0 0.05
-1 0.05
-2 0.05
-# id metabolization rate
-0 0.8 0.2 0
-1 0 0.8 0.2
-2 0 0 0.8
+0 0.0
+1 0.01
+2 0.02
+# id transformation_rate (n x n)
+0 0.0 0.0 0.0
+1 0.0 0.0 0.05
+2 0.0 0.0 0.0
 # The number of nodes
-3
-# id type K_n K_r d 
-0 0 1 1 0
-1 1 0 0 5 
-2 1 0 0 5
+5
+# id type K_n K_c d
+0 0 0 1 0
+1 1 0 0 20
+2 1 0 0 20
+3 1 0 0 20
+4 1 0 0 20
 # The concentration of each product on each node
-3
-0 0 0 0
-1 1 0 0
-2 1 0 0
+5
+0 0.0 0.0 0.0
+1 0.0 1.0 0.1
+2 0.0 1.0 0.2
+3 0.0 1.0 0.3
+4 0.0 1.0 0.4
 # The time horizon
-56
+31

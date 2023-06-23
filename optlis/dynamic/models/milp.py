@@ -139,7 +139,9 @@ def make_lp(instance: Instance):
     # On-site operations cannot overlap
     for i, t in set_product(TASKS, T):
 
-        cleaning = plp.lpSum(y[i][tau] for tau in range(CLEANING_START_TIMES[i][t], t + 1))
+        cleaning = plp.lpSum(
+            y[i][tau] for tau in range(CLEANING_START_TIMES[i][t], t + 1)
+        )
 
         neutralizing = plp.lpSum(
             x[i][p][tau]
@@ -151,12 +153,12 @@ def make_lp(instance: Instance):
 
     # (test only) hardcode on-site ops
     # lp += x[1][1][1] == 1
-    lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 1
+    # lp += plp.lpSum(x[i][p][t] for i, p, t in set_product(TASKS, PRODUCTS, T)) == 0
 
     # (test only) hardcode on-site ops
     # lp += y[1][1] == 1
     # lp += r[1][1][1] == 0.15
-    lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 1
+    # lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 0
 
     # (bug) avoid operations when there's no resource
     if RESOURCES["Qn"] == 0:
