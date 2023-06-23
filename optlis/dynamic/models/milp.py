@@ -95,9 +95,13 @@ def make_lp(instance: Instance):
 
     # Resource constraints (cleaning operation)
     for t in T:
-        time_window = range(CLEANING_START_TIMES[i][t], t + 1)
+        # time_window = range(CLEANING_START_TIMES[i][t], t + 1)
         lp += (
-            plp.lpSum(y[i][tau] for i in TASKS for tau in time_window)
+            plp.lpSum(
+                y[i][tau]
+                for i in TASKS
+                for tau in range(CLEANING_START_TIMES[i][t], t + 1)
+            )
             <= RESOURCES["Qc"]
         )
 
@@ -158,7 +162,7 @@ def make_lp(instance: Instance):
     # (test only) hardcode on-site ops
     # lp += y[1][1] == 1
     # lp += r[1][1][1] == 0.15
-    # lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 0
+    # lp += plp.lpSum(y[i][t] for i, t in set_product(TASKS, T)) == 2
 
     # (bug) avoid operations when there's no resource
     if RESOURCES["Qn"] == 0:
