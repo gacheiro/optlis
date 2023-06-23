@@ -35,21 +35,20 @@ pytest
 You will also have to manually install CPLEX python interface if you want to run the integer models.
 
 ## Usage
+Generate the instance benchmark:
 
 ```bash
-optlis --help
+invoke export-benchmark path/to/inst-dir/ 
 ```
 
-Generate the instances:
+Solve the instance benchmark:
 
 ```bash
-mkdir instance-benchmark
-optlis generate instance-benchmark
+invoke --help bulk-solve # Display help
+
+invoke bulk-solve [solver] path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-dir # static problem
+invoke bulk-solve [solver] -d path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-dir # dynamic problem
 ```
 
-Solve an instance with an optimization model:
-
-```bash
-optlis cplex /path/to/instance
-optlis ils /path/to/instance
-```
+Replace `[solver]` by `cplex` or `ils`.
+For the moment, bulk solving the dynamic problem with ils is not supported.
