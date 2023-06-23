@@ -38,7 +38,7 @@ You will also have to manually install CPLEX python interface if you want to run
 Generate the instance benchmark:
 
 ```bash
-invoke export-benchmark path/to/inst-dir/ 
+invoke export-benchmark path/to/inst-dir/
 ```
 
 Solve the instance benchmark:
@@ -46,9 +46,9 @@ Solve the instance benchmark:
 ```bash
 invoke --help bulk-solve # Display help
 
-invoke bulk-solve [solver] path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-dir # static problem
-invoke bulk-solve [solver] -d path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-dir # dynamic problem
+invoke bulk-solve [solver] path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-dir -t `[time limit]` # static problem
+invoke bulk-solve [solver] -d path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-dir -t `[evaluations]` # dynamic problem
 ```
 
-Replace `[solver]` by `cplex` or `ils`.
+Replace `[solver]` by `cplex` or `ils` and define a `[time limit]` for cplex (in seconds) or a max number of evaluation calls for ils.
 For the moment, bulk solving the dynamic problem with ils is not supported.

@@ -141,7 +141,13 @@ class Instance(StaticInstance):
 
     @cached_property
     def time_units(self):
-        return np.array(range(101), dtype=np.int32)
+        sites, products = self.nodes, self.products
+        T = sum(
+            max(self.initial_concentration(i, p) for p in products)
+            / self.CLEANING_SPEED
+            for i in sites
+        )
+        return np.array(range(int(T) + 1), dtype=np.int32)
 
     @property
     def time_periods(self):

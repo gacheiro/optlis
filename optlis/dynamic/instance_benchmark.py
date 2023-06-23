@@ -76,12 +76,12 @@ def generate_benchmark(export_dir: Union[str, Path] = "", random_seed: int = 0) 
         n = len(instance.nodes)
         export_instance(instance, Path(f"{export_dir}/hx-n{n-1}-pu-ru-q{1}.dat"))
 
-        # # Generates instances with 2^0, 2^1, ..., 2^log_2(n-1) teams
-        # for q in [2**i for i in range(1, 10) if 2**i < n] + [n - 1]:
-        #     export_instance(
-        #         generate_instance(size, nb_teams=q, seed=seed),
-        #         Path(f"{export_dir}/hx-n{n-1}-pu-ru-q{q}.dat"),
-        #     )
+        # Generates instances with 2^0, 2^1, ..., 2^log_2(n-1) teams
+        for q in [2**i for i in range(1, 10) if 2**i < n] + [n - 1]:
+            export_instance(
+                two_species_instance(size, res=(0, q), random_seed=random_seed),
+                Path(f"{export_dir}/hx-n{n-1}-pu-ru-q{q}.dat"),
+            )
 
 
 def from_command_line(args: Dict[str, Any]) -> None:

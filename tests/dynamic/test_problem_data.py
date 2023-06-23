@@ -42,6 +42,6 @@ def test_export_instance(example_dynamic_instance):
             "6 0.00 1.00 0.50",
             "7 0.00 1.00 0.50",
             "8 0.00 1.00 0.50",
-            "101\n",
+            "106\n",
         )
     )

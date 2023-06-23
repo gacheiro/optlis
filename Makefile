@@ -1,3 +1,5 @@
+default: static dynamic
+
 static: optlis/static/models/localsearch.c
 	mkdir -p build lib
 	mkdir -p build/static lib/static
