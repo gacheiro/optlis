@@ -1,8 +1,9 @@
 from pathlib import Path
 from invoke import task, Failure
 
+
+import optlis
 from optlis.static.problem_data import load_instance
-from optlis.static.instance_benchmark import generate_benchmark
 from optlis.static.models.ils import show_stats, optimize as ils
 from optlis.static.models.milp import model_1, model_2, optimize as cplex
 
@@ -47,8 +48,16 @@ def check(c):
 def export_benchmark(c, export_dir, seed=0):
     """Exports the instance benchmark to disk."""
     export_to = Path(export_dir)
-    export_to.mkdir(parents=True, exist_ok=True)
-    generate_benchmark(export_to, seed)
+
+    # Exports static instances
+    export_to_static = export_to / "static"
+    export_to_static.mkdir(parents=True, exist_ok=True)
+    optlis.static.instance_benchmark.generate_benchmark(export_to_static, seed)
+
+    # Exports dynamic instances
+    export_to_dynamic = export_to / "dynamic"
+    export_to_dynamic.mkdir(parents=True, exist_ok=True)
+    optlis.dynamic.instance_benchmark.generate_benchmark(export_to_dynamic, seed)
 
 
 @task(

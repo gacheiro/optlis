@@ -43,7 +43,6 @@ class Budget:
 class Solution:
     instance: Instance
     task_list: npt.NDArray[np.int32]
-    relaxation_threshold: float
     nodes_concentration: npt.NDArray[Any]
     objective: float = float("inf")
     consumed_budget: int = 1
@@ -66,6 +65,8 @@ class Solution:
             )
             for i, p in set_product(instance.nodes, instance.products):
                 self.nodes_concentration[i][p][0] = instance.initial_concentration(i, p)
+        else:
+            self.nodes_concentration = np.array(nodes_concentration)
 
         self.objective = objective
         self.consumed_budget = consumed_budget
@@ -166,30 +167,31 @@ def perturbate(
 def ils(
     instance: Instance,
     evaluations: Optional[int] = None,
+    perturbation_strength: float = 0.5,
     seed: int = 0,
 ) -> Tuple[Solution, int, float]:
     """Runs ILS optimization loop."""
     evaluations = evaluations or np.iinfo(np.int32).max
-    initial_solution = construct_solution(instance)
-    # start_time = time.time()
-    # rng = np.random.default_rng(seed)
+    current_solution = construct_solution(instance)
+    start_time = time.time()
+    rng = np.random.default_rng(seed)
 
     # evaluations = evaluations or len(instance.tasks) * 10_000
-    current_solution = initial_solution
     budget = Budget(max=evaluations)
     local_search(current_solution, budget)
 
-    # it_without_improvements = 0
-    # while budget.can_evaluate() and it_without_improvements < 10:
-    #     solution = current_solution.copy()
-    #     perturbate(solution, perturbation_strength, rng=rng.integers)
-    #     local_search(solution, budget)
-    #     if solution.objective < current_solution.objective:
-    #         current_solution = solution
-    #         it_without_improvements = 0
-    #     else:
-    #         it_without_improvements += 1
-    # return current_solution, budget.consumed, time.time() - start_time
+    it_without_improvements = 0
+    while budget.can_evaluate() and it_without_improvements < 10:
+        solution = current_solution.copy()
+        perturbate(solution, perturbation_strength, rng=rng.integers)
+        local_search(solution, budget)
+        if solution.objective < current_solution.objective:
+            current_solution = solution
+            it_without_improvements = 0
+        else:
+            it_without_improvements += 1
+
+    return current_solution, budget.consumed, time.time() - start_time
 
 
 def optimize(
@@ -230,7 +232,7 @@ def optimize(
 
     # return results
 
-    ils(instance, evaluations)
+    return ils(instance, evaluations, perturbation_strength)
 
 
 def from_command_line(args: Dict[str, Any]) -> None:
@@ -242,3 +244,6 @@ def from_command_line(args: Dict[str, Any]) -> None:
         parallel=args["parallel"],
         evaluations=args["evaluations"],
     )
+
+    # print(res[0].task_list)
+    print(f"{res[0].objective:.4f}, {res[1]}")

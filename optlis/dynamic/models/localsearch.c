@@ -85,7 +85,7 @@ void local_search(const struct instance *inst, struct solution *sol,
                   struct budget *budget) {
   calculate_schedule(inst, sol);
   while (try_improve_solution(inst, sol, budget));
-  print_info(inst, sol, budget);
+  // print_info(inst, sol, budget);
 }
 
 void print_info(const struct instance *inst, const struct solution *sol,
@@ -213,6 +213,9 @@ void metabolizing_scheme(const struct instance *inst, struct solution *sol,
 void neutralizing_scheme(const struct instance *inst, struct solution *sol,
                          size_t i, size_t p, size_t t) {
 
+  if (t == 0)
+    return;
+
   int nproducts = inst->nproducts;
   int ntime_units = inst->ntime_units;
 
@@ -227,6 +230,9 @@ void neutralizing_scheme(const struct instance *inst, struct solution *sol,
 
 void cleaning_scheme(const struct instance *inst, struct solution *sol,
                      size_t i, size_t t) {
+
+  if (t == 0)
+    return;
 
   int nproducts = inst->nproducts;
   int ntime_units = inst->ntime_units;

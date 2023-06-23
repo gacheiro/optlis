@@ -95,7 +95,6 @@ def make_lp(instance: Instance):
 
     # Resource constraints (cleaning operation)
     for t in T:
-        # time_window = range(CLEANING_START_TIMES[i][t], t + 1)
         lp += (
             plp.lpSum(
                 y[i][tau]
