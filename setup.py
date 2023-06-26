@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name="optlis",
-    version="0.2.0-beta1",
+    version="0.2.0-beta2",
     author="Thiago J. Barbalho",
     description=__doc__,
     packages = ["optlis"],
@@ -16,7 +16,7 @@ setup(
         "black>=22.12.0",
         "invoke>=1.7.3,<2.0.0",
         "jupyter>=1.0.0",
-        "matplotlib>=3.3.4<4.0.0",
+        "matplotlib>=3.3.4,<4.0.0",
         "networkx>=2.5.0,<3.0.0",
         "numpy>=1.9.0,<2.0.0",
         "mypy>=0.991",
