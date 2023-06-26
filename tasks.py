@@ -5,6 +5,9 @@ from invoke import task, Failure
 import optlis
 from optlis import static, dynamic
 
+ILS_MAX_EVALUATIONS = 0  # auto: |V| * 10_000 evaluations
+CPLEX_TIME_LIMIT = 14_000  # 4 hours
+
 
 @task
 def check(c):
@@ -64,9 +67,6 @@ def export_benchmark(c, export_dir, seed=0):
         "inst_dir": "Directory where instances are located",
         "dynamic": "Sets the problem type to dynamic",
         "relaxation": "Sets the relaxation threshold (in range [0, 1] default 0)",
-        "perturbation": "Sets the perturb. strength (ils only, in range [0, 1] default 0.5)",
-        "stop": "Sets the stopping criterion. In seconds when solving with cplex, "
-        "in objective function calls when solving with ils",
         "repeat": "Sets the number of repetitions to perform (ils only, default 35)",
         "parallel": "Sets the number of parallel processes (ils only, default 4)",
         "tt-off": "Disables travel times",
@@ -80,8 +80,6 @@ def bulk_solve(
     inst_dir,
     dynamic=False,
     relaxation=0.0,
-    perturbation=0.5,
-    stop=0,
     repeat=35,
     parallel=4,
     tt_off=False,
@@ -91,29 +89,43 @@ def bulk_solve(
     """Solves all instances located in the 'inst-dir' directory."""
     if solver.lower() == "ils":
         if dynamic:
-            raise NotImplementedError
+            _bulk_solve_dynamic_ils(
+                inst_dir, ILS_MAX_EVALUATIONS, repeat, parallel, log_dir
+            )
         else:
             _bulk_solve_static_ils(
-                inst_dir, relaxation, perturbation, stop, repeat, parallel, tt_off
+                inst_dir,
+                relaxation,
+                ILS_MAX_EVALUATIONS,
+                repeat,
+                parallel,
+                tt_off,
+                log_dir,
             )
     elif solver.lower() == "cplex":
         if dynamic:
-            _bulk_solve_dynamic_cplex(inst_dir, stop, log_dir, sol_dir)
+            _bulk_solve_dynamic_cplex(inst_dir, ILS_MAX_EVALUATIONS, log_dir, sol_dir)
         else:
             _bulk_solve_static_cplex(
-                inst_dir, relaxation, stop, tt_off, log_dir, sol_dir
+                inst_dir, relaxation, CPLEX_TIME_LIMIT, tt_off, log_dir, sol_dir
             )
     else:
         raise ValueError(f"'{solver}' is not a valid option, use 'cplex' or 'ils'")
 
 
 def _bulk_solve_static_ils(
-    inst_dir, relaxation, perturbation, stop, repeat, parallel, tt_off
+    inst_dir, relaxation, stop, repeat, parallel, tt_off, log_dir
 ):
     inst_paths = sorted(Path(inst_dir).glob("hx-*.dat"))
     for i, path in enumerate(inst_paths):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = static.problem_data.load_instance(path, not tt_off)
+
+        if log_dir:
+            log_path = Path(log_dir) / f"{path.stem}.log"
+        else:
+            log_path = None
+
         results = static.models.ils.optimize(
             instance=instance,
             runs=repeat,
@@ -121,9 +133,29 @@ def _bulk_solve_static_ils(
             perturbation_strength=_get_irace_static_config(tt_off, relaxation),
             relaxation_threshold=relaxation,
             evaluations=stop,
+            log_path=log_path,
         )
-        static.models.ils.show_stats(results)
-        print("")
+
+
+def _bulk_solve_dynamic_ils(inst_dir, stop, repeat, parallel, log_dir):
+    inst_paths = sorted(Path(inst_dir).glob("hx-*.dat"))
+    for i, path in enumerate(inst_paths):
+        print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
+        instance = dynamic.problem_data.load_instance(path)
+
+        if log_dir:
+            log_path = Path(log_dir) / f"{path.stem}.log"
+        else:
+            log_path = None
+
+        results = dynamic.models.ils.optimize(
+            instance=instance,
+            runs=repeat,
+            parallel=parallel,
+            perturbation_strength=0.5,
+            evaluations=stop,
+            log_path=log_path,
+        )
 
 
 def _bulk_solve_static_cplex(

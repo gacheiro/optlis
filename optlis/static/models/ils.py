@@ -1,6 +1,7 @@
 from typing import Tuple, List, Dict, Optional, Callable, Any
 
 import cProfile
+import logging
 import time
 import statistics
 from multiprocessing import Pool
@@ -135,34 +136,6 @@ class Solution:
         )
 
 
-def show_stats(results: List[Tuple[Solution, int, float]]) -> None:
-    solutions = [r[0] for r in results]
-    objectives = [s.objective for s in solutions]
-    min_objective, mean_objective, stddev_objective = (
-        min(objectives),
-        statistics.fmean(objectives),
-        statistics.stdev(objectives),
-    )
-    print(
-        f"\nObjective - Min: {min_objective:.2f} Mean: {mean_objective:.2f} "
-        f"Std Dev: {stddev_objective:.2f}"
-    )
-    budgets = [s.consumed_budget for s in solutions]
-    min_budget, mean_budget, max_budget = (
-        min(budgets),
-        statistics.mean(budgets),
-        max(budgets),
-    )
-    print(f"Budget - Min: {min_budget} Mean: {mean_budget:.2f} " f"Max: {max_budget}")
-    elapsed_times = [r[2] for r in results]
-    min_time, mean_time, max_time = (
-        min(elapsed_times),
-        statistics.mean(elapsed_times),
-        max(elapsed_times),
-    )
-    print(f"Time - Min: {min_time:.3f} Mean: {mean_time:.3f} " f"Max: {max_time:.3f}")
-
-
 def construct_solution(instance: Instance, relaxation_threshold: float) -> Solution:
     """Builds an initial feasible solution."""
     task_list: npt.NDArray[np.int32] = sorted(  # type: ignore
@@ -222,8 +195,18 @@ def optimize(
     relaxation_threshold: float = 0.0,
     perturbation_strength: float = 0.5,
     evaluations: Optional[int] = None,
+    log_path=None,
 ) -> List[Tuple[Solution, int, float]]:
     """Loads and optimizes a problem instance. Uses multiple processes."""
+
+    if log_path:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        logging.basicConfig(
+            filename=log_path, level=logging.DEBUG, format="%(message)s", force=True
+        )
+    else:
+        logging.basicConfig(level=logging.DEBUG, format="%(message)s", force=True)
+
     results = []
     with Pool(processes=parallel) as pool:
         multiple_results = [
@@ -242,16 +225,50 @@ def optimize(
 
         for i, res in enumerate(multiple_results):
             solution, consumed_budget, elapsed_time = res.get()
-            print(
-                f"Run #{i:>02} (Seed: {i:>02}) -",
-                f"Objective: {solution.objective:.3f}",
-                f"(@ {solution.consumed_budget:>5})",
-                f"Consumed Budget: {consumed_budget:>4}",
-                f"Elapsed Time: {elapsed_time:.3f}s",
+            logging.info(
+                f"Run #{i:>02} (Seed: {i:>02}) - "
+                f"Objective: {solution.objective:.3f} "
+                f"(@ {solution.consumed_budget:>5}) "
+                f"Consumed Budget: {consumed_budget:>4} "
+                f"Elapsed Time: {elapsed_time:.3f}s"
             )
             results.append((solution, consumed_budget, elapsed_time))
 
+    log_stats(results)
+
     return results
+
+
+def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
+    solutions = [r[0] for r in results]
+    objectives = [s.objective for s in solutions]
+    min_objective, mean_objective, stddev_objective = (
+        min(objectives),
+        statistics.fmean(objectives),
+        statistics.stdev(objectives),
+    )
+    logging.info(
+        f"\nObjective - Min: {min_objective:.2f} Mean: {mean_objective:.2f} "
+        f"Std Dev: {stddev_objective:.2f}"
+    )
+    budgets = [s.consumed_budget for s in solutions]
+    min_budget, mean_budget, max_budget = (
+        min(budgets),
+        statistics.mean(budgets),
+        max(budgets),
+    )
+    logging.info(
+        f"Budget - Min: {min_budget} Mean: {mean_budget:.2f} " f"Max: {max_budget}"
+    )
+    elapsed_times = [r[2] for r in results]
+    min_time, mean_time, max_time = (
+        min(elapsed_times),
+        statistics.mean(elapsed_times),
+        max(elapsed_times),
+    )
+    logging.info(
+        f"Time - Min: {min_time:.3f} Mean: {mean_time:.3f} " f"Max: {max_time:.3f}\n"
+    )
 
 
 def from_command_line(args: Dict[str, Any]) -> None:
@@ -277,5 +294,5 @@ def from_command_line(args: Dict[str, Any]) -> None:
             relaxation_threshold=args["relaxation"],
             perturbation_strength=args["perturbation"],
             evaluations=args["evaluations"],
+            log_path=args["log_path"],
         )
-        show_stats(res)
