@@ -104,7 +104,7 @@ def bulk_solve(
             )
     elif solver.lower() == "cplex":
         if dynamic:
-            _bulk_solve_dynamic_cplex(inst_dir, ILS_MAX_EVALUATIONS, log_dir, sol_dir)
+            _bulk_solve_dynamic_cplex(inst_dir, CPLEX_TIME_LIMIT, log_dir, sol_dir)
         else:
             _bulk_solve_static_cplex(
                 inst_dir, relaxation, CPLEX_TIME_LIMIT, tt_off, log_dir, sol_dir
@@ -117,7 +117,7 @@ def _bulk_solve_static_ils(
     inst_dir, relaxation, stop, repeat, parallel, tt_off, log_dir
 ):
     inst_paths = sorted(Path(inst_dir).glob("hx-*.dat"))
-    for i, path in enumerate(inst_paths):
+    for i, path in enumerate(inst_paths, start=1):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = static.problem_data.load_instance(path, not tt_off)
 
@@ -139,7 +139,7 @@ def _bulk_solve_static_ils(
 
 def _bulk_solve_dynamic_ils(inst_dir, stop, repeat, parallel, log_dir):
     inst_paths = sorted(Path(inst_dir).glob("hx-*.dat"))
-    for i, path in enumerate(inst_paths):
+    for i, path in enumerate(inst_paths, start=1):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = dynamic.problem_data.load_instance(path)
 
@@ -168,7 +168,7 @@ def _bulk_solve_static_cplex(
         model = static.models.milp.model_2
 
     inst_paths = sorted(Path(inst_dir).glob("hx-*.dat"))
-    for i, path in enumerate(inst_paths):
+    for i, path in enumerate(inst_paths, start=1):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = static.problem_data.load_instance(path, not tt_off)
 
@@ -196,7 +196,7 @@ def _bulk_solve_static_cplex(
 def _bulk_solve_dynamic_cplex(inst_dir, time_limit, log_dir, sol_dir):
 
     inst_paths = sorted(Path(inst_dir).glob("hx-*.dat"))
-    for i, path in enumerate(inst_paths):
+    for i, path in enumerate(inst_paths, start=1):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = dynamic.problem_data.load_instance(path)
 
