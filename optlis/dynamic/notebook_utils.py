@@ -17,7 +17,7 @@ def _risk_at_time(inst, sol, t):
     return sum(sol.get(f"w_{i}_{p}_{t}", 0) * risk[p] for i, p in prod(tasks, products))
 
 
-def _plot_risk_by_time(ax, instance, solution, alpha=0.8):
+def _plot_risk_by_time(ax, instance, solution, alpha=0.8, print_data=False):
     """Plot a graph for the risk vs. time."""
     makespan = solution.get("makespan", MAKESPAN)
     x = list(range(1, makespan + 1))
@@ -30,6 +30,9 @@ def _plot_risk_by_time(ax, instance, solution, alpha=0.8):
     ax.legend(loc="upper right")
     ax.set(xlabel="time", ylabel="risk")
     ax.set_title("Risk over time")
+
+    if print_data:
+        print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y)))
 
 
 def _concentration_at_time(inst, sol, p, t):
@@ -62,7 +65,7 @@ def plot_graphs(instance_path, sol_path):
     print(f"makespan = {solution.get('makespan')})")
 
     fig, axs = plt.subplots(ncols=2, figsize=(10, 4))
-    _plot_risk_by_time(axs[0], instance, solution)
+    _plot_risk_by_time(axs[0], instance, solution, True)
     _plot_concentration_by_time(axs[1], instance, solution)
 
     plt.show()

@@ -50,4 +50,4 @@ invoke bulk-solve [solver] path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-d
 invoke bulk-solve [solver] -d path/to/inst-dir/ -o path/to/sol-dir -l path/to/log-dir # dynamic problem
 ```
 
-Replace `[solver]` by `cplex` or `ils` and define a `[time limit]` for cplex (in seconds) or a max number of evaluation calls for ils.
+Replace `[solver]` by `cplex` or `ils`.
