@@ -16,7 +16,7 @@ struct task {
 
 struct instance {
   size_t nnodes;
-  size_t ntasks;
+  size_t ntasks; // NOTE: rename this
   size_t nproducts;
   size_t ntime_units;
   int32_t *nresources;
@@ -249,7 +249,9 @@ double calculate_schedule(const struct instance *inst, struct solution *sol) {
 
   // NOTE: assumes the only depot is node 0 and the max number of resources
   // is 64
-  bool active_sites[64] = {false}; // used for the no overlap constraints
+  bool active_sites[128] = {false}; // used for the no overlap constraints
+  bool clean_sites[128] = {false};
+
   int neutralizing_start_times[64] = {0};
   int cleaning_start_times[64] = {0};
   int start_time;
@@ -296,6 +298,10 @@ double calculate_schedule(const struct instance *inst, struct solution *sol) {
       // The next task to be schedule
       if (nstarted_tasks < sol->ntasks)
         task = &sol->task_list[nstarted_tasks];
+
+      // Ignores neutralizing tasks after cleaning tasks
+      if (task != NULL && task->type == 0 && clean_sites[task->site])
+        ++nstarted_tasks;
 
       // This resource is free and can start the next task
       if (task != NULL && task->type == 0 && !active_sites[task->site]) {
@@ -345,6 +351,7 @@ double calculate_schedule(const struct instance *inst, struct solution *sol) {
         // printf("y_%d_%ld = 1\n", task->site, t);
 
         active_sites[task->site] = true;
+        clean_sites[task->site] = true;
         cleaning_resources[k] = task;
         cleaning_start_times[k] = t;
 

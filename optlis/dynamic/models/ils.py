@@ -71,22 +71,17 @@ class Solution:
         self.objective = objective
         self.consumed_budget = consumed_budget
 
-    def can_swap(self, i: int, j: int) -> bool:
-        """Returns True if tasks at indices i and j can be swapped."""
-        return True
-
-    def try_swap(self, i: int, j: int) -> bool:
-        """Tries to swap tasks at indices i and j (if allowed).
-        Return True if success, False otherwise.
-        """
-        if self.can_swap(i, j):
-            self.swap(i, j)
-            return True
-        return False
-
     def swap(self, i: int, j: int) -> None:
         """Swaps tasks at indices i and j."""
-        self.task_list[i], self.task_list[j] = (self.task_list[j], self.task_list[i])
+        if i == j:
+            return
+
+        aux = self.task_list[i].copy()
+        self.task_list[i] = self.task_list[j].copy()
+        self.task_list[j] = aux
+
+    def insert(self, task):
+        self.task_list = np.insert(self.task_list, 0, task) # NOTE: how bad is this?
 
     def copy(self) -> "Solution":
         """Returns a copy of the solution."""
@@ -130,10 +125,23 @@ def perturbate(
     """Applies a random sequence of `swaps` to a solution (in place)."""
     nnodes = len(solution.task_list)
     nswaps = int(nnodes * perturbation_strength / 2)
-    while nswaps > 0:
+    for _ in range(nswaps):
         indexes = rng(low=0, high=nnodes, size=2)
-        if solution.try_swap(indexes.min(), indexes.max()):
-            nswaps -= 1
+        solution.swap(indexes.min(), indexes.max())
+
+
+def perturbate2(
+    solution: Solution,
+    perturbation_strength: float,
+    rng: Callable[..., npt.NDArray[np.int32]],
+):
+    nsites = len(solution.instance.tasks)
+    nproducts = len(solution.instance.products)
+
+    for _ in range(2):
+        i = rng(low=1, high=nsites)
+        p = rng(low=1, high=nproducts)
+        solution.insert((0, i, p))
 
 
 def ils(
@@ -153,9 +161,13 @@ def ils(
     local_search(current_solution, budget)
 
     it_without_improvements = 0
+
     while budget.can_evaluate() and it_without_improvements < 10:
         solution = current_solution.copy()
+        # print("<", solution.task_list)
         perturbate(solution, perturbation_strength, rng=rng.integers)
+        perturbate2(solution, perturbation_strength, rng=rng.integers)
+        # print(">", solution.task_list)
         local_search(solution, budget)
         if solution.objective < current_solution.objective:
             current_solution = solution
@@ -249,10 +261,17 @@ def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
 def from_command_line(args: Dict[str, Any]) -> None:
     instance = load_instance(args["instance-path"])
 
-    res = optimize(
-        instance,
-        runs=args["runs"],
-        parallel=args["parallel"],
-        evaluations=args["evaluations"],
-        log_path=args["log_path"],
+    # res = optimize(
+    #     instance,
+    #     runs=args["runs"],
+    #     parallel=args["parallel"],
+    #     evaluations=args["evaluations"],
+    #     log_path=args["log_path"],
+    # )
+
+    s, _, t = ils(
+        instance
     )
+    print(s.objective, t)
+    print(s.task_list)
+    import pdb; pdb.set_trace()

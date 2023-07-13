@@ -104,6 +104,7 @@ class Solution:
 
     def swap(self, i: int, j: int) -> None:
         """Swaps tasks at indices i and j."""
+        # NOTE: is this bugged?
         self.task_list[i], self.task_list[j] = (self.task_list[j], self.task_list[i])
         # Also swaps the risk array, they match the indices
         self.task_risks[i], self.task_risks[j] = (
