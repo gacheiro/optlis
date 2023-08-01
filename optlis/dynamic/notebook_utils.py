@@ -7,7 +7,7 @@ from optlis.shared import import_solution
 from optlis.dynamic import load_instance
 
 
-MAKESPAN = 100
+MAKESPAN = 500
 
 
 def _risk_at_time(inst, sol, t):
@@ -56,7 +56,7 @@ def _plot_concentration_by_time(ax, instance, solution, alpha=0.8):
     ax.legend(loc="upper right")
 
 
-def plot_graphs(instance_path, sol_path):
+def plot_graphs(instance_path, sol_path, print_data=False):
     instance = load_instance(instance_path)
     solution = import_solution(sol_path)
 
@@ -65,7 +65,7 @@ def plot_graphs(instance_path, sol_path):
     print(f"makespan = {solution.get('makespan')})")
 
     fig, axs = plt.subplots(ncols=2, figsize=(10, 4))
-    _plot_risk_by_time(axs[0], instance, solution, True)
+    _plot_risk_by_time(axs[0], instance, solution, print_data=print_data)
     _plot_concentration_by_time(axs[1], instance, solution)
 
     plt.show()

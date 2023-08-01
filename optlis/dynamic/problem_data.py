@@ -147,6 +147,7 @@ class Instance(StaticInstance):
             / self.CLEANING_SPEED
             for i in sites
         )
+        T = max(T, 500)
         return np.array(range(int(T) + 1), dtype=np.int32)
 
     @property
@@ -255,17 +256,17 @@ def _write_instance(instance: Instance, outfile: TextIO) -> None:
     # Write product risk
     outfile.write(f"{len(instance.products)}\n")
     for pid in instance.products:
-        outfile.write(f"{pid} {instance.products_risk[pid]:.2f}\n")
+        outfile.write(f"{pid} {instance.products_risk[pid]:.4f}\n")
 
     # Write product degradation rate
     for pid in instance.products:
-        outfile.write(f"{pid} {instance.degradation_rates[pid]:.2f}\n")
+        outfile.write(f"{pid} {instance.degradation_rates[pid]:.4f}\n")
 
     # Write product metabolization matrix
     for pid in instance.products:
         outfile.write(f"{pid}")
         for sid in instance.products:
-            outfile.write(f" {instance.metabolizing_rates[pid][sid]:.2f}")
+            outfile.write(f" {instance.metabolizing_rates[pid][sid]:.4f}")
         outfile.write("\n")
 
     # Write nodes information
@@ -279,7 +280,7 @@ def _write_instance(instance: Instance, outfile: TextIO) -> None:
     for id in instance.nodes:
         outfile.write(f"{id}")
         for pid in instance.products:
-            outfile.write(f" {instance.initial_concentration(id, pid):.2f}")
+            outfile.write(f" {instance.initial_concentration(id, pid):.4f}")
         outfile.write("\n")
 
     T = instance.time_units[-1]
