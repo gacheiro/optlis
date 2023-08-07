@@ -75,7 +75,7 @@ def decrease(graph_size, nresources=(0, 0), random_seed=0):
 
     nproducts = 3
     products = (0, 1, 2)  # product 0 is neutral
-    risk = [0, 1, 0.3]
+    risk = [0, 1, 0.5]
 
    # Generates `|V|` random initial concentration for each product specie
     parent_initial_concentration = rng.normal(0.5, 0.5, nnodes)
