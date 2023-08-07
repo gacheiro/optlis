@@ -45,13 +45,18 @@ class ResultParser:
             objective = float(m.group(1))
         except AttributeError:
             objective = np.nan
+
         m = re.search(r"Current MIP best bound =  (\d+.\d+e\+\d+)", log_str)
         try:
             lower_bound = float(m.group(1))
         except AttributeError:
             lower_bound = np.nan
-        m = re.search(r"Solution time =\s+(\d+.\d+)", log_str)
-        time = float(m.group(1))
+
+        try:
+            m = re.search(r"Solution time =\s+(\d+.\d+)", log_str)
+            time = float(m.group(1))
+        except AttributeError:
+            time = np.nan
 
         return ParsedCPLEXLog(objective, lower_bound, time)
 
