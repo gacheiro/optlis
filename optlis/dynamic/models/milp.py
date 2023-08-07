@@ -205,7 +205,11 @@ def optimize(
     # Prints variables with their optimized values
     print("")
     try:
-        print(f"objective_function = {prob.objective.value():.4f}")
+        print(f"Objective function = {prob.objective.value():.4f}")
+        print("Solution status =", plp.constants.LpStatus.get(prob.status, "Unknown"))
+        print("Solution Time =", prob.solutionTime)
+        print("Solution CPU Time =", prob.solutionCpuTime)
+
     except TypeError:
         pass
 
@@ -215,11 +219,17 @@ def optimize(
             formatted_value = v.varValue if v.isInteger() else f"{v.varValue:.5f}"
             print(f"{v.name.ljust(lhs_size)} = {formatted_value}")
 
-    # TODO: only write solution if it exists!
     if sol_path:
         sol_path = Path(sol_path)
         sol_path.parent.mkdir(parents=True, exist_ok=True)
-        export_solution({v.name: v.varValue for v in prob.variables()}, "", sol_path)
+
+        data = {
+            "Status": plp.constants.LpStatus.get(prob.status, "Unknown"),
+            "Time": prob.solutionTime,
+        }
+        data.update({v.name: v.varValue for v in prob.variables()})
+
+        export_solution(data, "", sol_path)
 
 
 def from_command_line(args: Dict[str, Any]) -> None:
