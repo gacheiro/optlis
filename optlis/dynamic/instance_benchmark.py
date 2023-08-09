@@ -202,7 +202,7 @@ def generate_benchmark(export_dir: Union[str, Path] = "", random_seed: int = 0) 
         elif bname == "decrease":
             generate = decrease
 
-        for graph_size in [(5, 1), (2, 9), (4, 11)]:
+        for graph_size in [(5, 1), (2, 9), (4, 11), (9, 11)]:
             for name, instance in generate(
                 graph_size, nresources=(0, 0), random_seed=random_seed
             ):
