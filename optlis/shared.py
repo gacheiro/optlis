@@ -61,6 +61,15 @@ class ResultParser:
         return ParsedCPLEXLog(objective, lower_bound, time)
 
     @staticmethod
+    def gap_from_pycplex_log_file(log_path):
+        with open(log_path, "r") as log_file:
+            log_str = log_file.read()
+            try:
+                return float(re.findall(r"[\d]+.[\d]+%\n", log_str)[-1][:-2])
+            except (IndexError, AttributeError, ValueError):
+                return np.nan
+
+    @staticmethod
     def from_ils_log_file(log_path):
         """Extracts the best and mean solution values and
         the mean solution time from an ils log.
@@ -93,10 +102,13 @@ def import_solution(path: Union[str, Path]) -> Dict[str, Union[int, float]]:
         _ = sol_file.readline()
         for line in sol_file:
             variable, value = line.split("=")
-            try:
+            if variable.isalnum():
                 variables[variable.strip()] = int(value)
-            except ValueError:
-                variables[variable.strip()] = float(value)
+            else:
+                try:
+                    variables[variable.strip()] = float(value)
+                except ValueError:
+                    variables[variable.strip()] = value
     return variables
 
 
