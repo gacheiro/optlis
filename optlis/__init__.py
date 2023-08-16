@@ -27,7 +27,13 @@ solver_parser.add_argument(
     help="relaxation threshold (in range [0, 1], default 0.0)",
 )
 solver_parser.add_argument(
-    "--perturbation",
+    "--perturbation1",
+    type=float,
+    default=0.5,
+    help="perturbation strength (in range [0, 1], default 0.5)",
+)
+solver_parser.add_argument(
+    "--perturbation2",
     type=float,
     default=0.5,
     help="perturbation strength (in range [0, 1], default 0.5)",

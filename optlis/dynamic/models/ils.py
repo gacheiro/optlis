@@ -1,3 +1,4 @@
+import math
 from typing import Tuple, List, Dict, Optional, Callable, Any
 
 import cProfile
@@ -81,7 +82,7 @@ class Solution:
         self.task_list[j] = aux
 
     def insert(self, task):
-        self.task_list = np.insert(self.task_list, 0, task) # NOTE: how bad is this?
+        self.task_list = np.insert(self.task_list, 0, task)  # NOTE: how bad is this?
 
     def copy(self) -> "Solution":
         """Returns a copy of the solution."""
@@ -137,8 +138,9 @@ def perturbate2(
 ):
     nsites = len(solution.instance.tasks)
     nproducts = len(solution.instance.products)
+    ninserts = math.ceil(solution.instance.resources["Qn"] * perturbation_strength)
 
-    for _ in range(2):
+    for _ in range(ninserts):
         i = rng(low=1, high=nsites)
         p = rng(low=1, high=nproducts)
         solution.insert((0, i, p))
@@ -146,7 +148,8 @@ def perturbate2(
 
 def ils(
     instance: Instance,
-    perturbation_strength: float = 0.5,
+    perturbation_strength1: float = 0.5,
+    perturbation_strength2: float = 0.5,
     evaluations: Optional[int] = None,
     seed: int = 0,
 ) -> Tuple[Solution, int, float]:
@@ -165,8 +168,8 @@ def ils(
     while budget.can_evaluate() and it_without_improvements < 10:
         solution = current_solution.copy()
         # print("<", solution.task_list)
-        perturbate(solution, perturbation_strength, rng=rng.integers)
-        perturbate2(solution, perturbation_strength, rng=rng.integers)
+        perturbate(solution, perturbation_strength1, rng=rng.integers)
+        perturbate2(solution, perturbation_strength2, rng=rng.integers)
         # print(">", solution.task_list)
         local_search(solution, budget)
         if solution.objective < current_solution.objective:
@@ -269,9 +272,11 @@ def from_command_line(args: Dict[str, Any]) -> None:
     #     log_path=args["log_path"],
     # )
 
-    s, _, t = ils(
-        instance
-    )
+    s, _, t = ils(instance,
+                  args["perturbation1"],
+                  args["perturbation2"])
     print(s.objective, t)
-    print(s.task_list)
-    import pdb; pdb.set_trace()
+    # print(s.task_list)
+    # import pdb
+
+    # pdb.set_trace()
