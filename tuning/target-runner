@@ -21,8 +21,8 @@ error() {
     exit 1
 }
 
-EXE=../../ils-runner
-FIXED_PARAMS="--tunning --relaxation 0.5"
+EXE=./ils-runner
+FIXED_PARAMS="--dynamic ils --tuning"
 
 CONFIG_ID=$1
 INSTANCE_ID=$2
@@ -42,7 +42,7 @@ fi
 # creating another process, but there can be no other commands after exec.
 #exec $EXE ${FIXED_PARAMS} -i $INSTANCE ${CONFIG_PARAMS}
 # exit 1
-# 
+#
 # Otherwise, save the output to a file, and parse the result from it.
 # (If you wish to ignore segmentation faults you can use '{}' around
 # the command.)

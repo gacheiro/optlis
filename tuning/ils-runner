@@ -1,5 +1,5 @@
 #!/home/gacheiro/Github/optlis/.venv/bin/python
 
-from optlis.solvers.ils import from_command_line
+from optlis import main
 
-from_command_line()
+main()
