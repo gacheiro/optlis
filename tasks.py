@@ -170,7 +170,8 @@ def _bulk_solve_dynamic_ils(inst_dir, stop, repeat, parallel, log_dir):
             instance=instance,
             runs=repeat,
             parallel=parallel,
-            perturbation_strength=0.5,
+            perturbation_strength1=rho1,
+            perturbation_strength2=rho2,
             evaluations=stop,
             log_path=log_path,
         )

@@ -185,7 +185,8 @@ def optimize(
     instance: Instance,
     runs: int = 35,
     parallel: int = 4,
-    perturbation_strength: float = 0.5,
+    perturbation_strength1: float = 0.5,
+    perturbation_strength2: float = 0.5,
     evaluations: Optional[int] = None,
     log_path=None,
 ) -> List[Tuple[Solution, int, float]]:
@@ -206,7 +207,8 @@ def optimize(
                 ils,
                 (
                     instance,
-                    perturbation_strength,
+                    perturbation_strength1,
+                    perturbation_strength2,
                     evaluations,
                     seed,
                 ),
