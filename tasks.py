@@ -279,4 +279,32 @@ def _get_irace_dynamic_config(size, scenario, benchmark):
                 return 0.90, 0.58
             elif size == 16:
                 return  0.09, 0.06
-    raise NotImplementedError
+        else:
+            if size == 8:
+                return 0.38, 2.75
+            elif size == 16:
+                return 0.54, 1.86
+
+    elif scenario == "increase":
+        if benchmark == "no-degradation":
+            if size == 8:
+                return 0.48, 0.46
+            elif size == 16:
+                return 0.34 , 2.64
+        elif benchmark == "parent-degradation":
+            if size == 8:
+                return 0.41, 2.70
+            elif size == 16:
+                return  0.32, 1.63
+        elif benchmark == "metabolite-degradation":
+            if size == 8:
+                return 0.36, 1.07
+            elif size == 16:
+                return  0.82, 2.66
+        else:
+            if size == 8:
+                return 0.82, 1.71
+            elif size == 16:
+                return 0.28, 2.22
+
+    raise ValueError
