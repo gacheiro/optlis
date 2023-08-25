@@ -108,7 +108,7 @@ def import_solution(path: Union[str, Path]) -> Dict[str, Union[int, float]]:
                 try:
                     variables[variable.strip()] = float(value)
                 except ValueError:
-                    variables[variable.strip()] = value
+                    variables[variable.strip()] = value.strip()
     return variables
 
 

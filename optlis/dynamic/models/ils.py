@@ -276,7 +276,8 @@ def from_command_line(args: Dict[str, Any]) -> None:
 
     s, _, t = ils(instance,
                   args["perturbation1"],
-                  args["perturbation2"])
+                  args["perturbation2"],
+                  args["evaluations"])
     print(s.objective, t)
     # print(s.task_list)
     # import pdb
