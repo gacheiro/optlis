@@ -9,6 +9,7 @@ import networkx as nx  # type: ignore
 import numpy as np
 import numpy.typing as npt
 
+from optlis.shared import set_product
 from optlis.static.models.ctypes import c_instance, c_int32, c_size_t, c_double, POINTER
 
 
@@ -95,19 +96,34 @@ class Instance(nx.Graph):
             list(nx.get_node_attributes(self, "r").values()), dtype=np.float64
         )
 
-    # TODO: change `d` to `relaxation_threshold`
     def precedence(self, d: float = 0) -> Generator[Tuple[int, int], None, None]:
-        """Generates the set precedence for a given relaxation threshold in the form of
-        (i, j) tuples.
+        """Generates the set of priority relations for a given relaxation threshold
+        in the form of (i, j) tuples.
 
         NOTE: use d = 0, 0.5 and 1 for the strict, moderate and none priority rules,
               respectively.
         """
         node_risk_dict = nx.get_node_attributes(self, "r")
+        nnodes = len(self.nodes())
+        adj_m = np.zeros((nnodes, nnodes), dtype=np.int32)
+
+        # Creates a DAG with all the priority constraints
         for i, ri in node_risk_dict.items():
             for j, rj in node_risk_dict.items():
                 if ri > rj + d and i not in self.depots and j not in self.depots:
-                    yield (i, j)
+                    adj_m[i][j] = 1
+
+        # Removes redundant arcs: if the priorities i -> k, k -> j and i -> j
+        # exist, remove i -> j because it's redundant
+        for i, k, j in set_product(self.nodes, self.nodes, self.nodes):
+            if adj_m[i][k] == 1 and adj_m[k][j] == 1 and adj_m[i][j] == 1:
+                adj_m[i][j] = 0
+
+        # Returns the reduced DAG
+        for i, j in set_product(self.nodes, self.nodes):
+            if adj_m[i][j] == 1:
+                yield (i, j)
+
 
     def c_struct(self) -> c_instance:
         return c_instance(
