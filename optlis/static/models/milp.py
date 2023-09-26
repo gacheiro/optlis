@@ -175,20 +175,36 @@ def optimize(
     solver = plp.getSolver("CPLEX_PY", timeLimit=time_limit, logPath=log_path)
 
     prob.solve(solver)
-    print("Status:", plp.LpStatus.get(prob.status))
     prob.roundSolution()
 
-    # Prints variables with it's resolved optimum value
+    # Prints variables with their optimized values
     print("")
+    try:
+        print(f"Objective function = {prob.objective.value():.4f}")
+        print("Solution status =", plp.constants.LpStatus.get(prob.status, "Unknown"))
+        print("Solution Time =", prob.solutionTime)
+        print("Solution CPU Time =", prob.solutionCpuTime)
+
+    except TypeError:
+        pass
+
+    lhs_size = max(len(v.name) for v in prob.variables())
     for v in prob.variables():
         if v.varValue:
-            print(v.name, "=", v.varValue)
+            formatted_value = v.varValue if v.isInteger() else f"{v.varValue:.5f}"
+            print(f"{v.name.ljust(lhs_size)} = {formatted_value}")
 
-    # TODO: only write solution with it exists!
     if sol_path:
         sol_path = Path(sol_path)
         sol_path.parent.mkdir(parents=True, exist_ok=True)
-        export_solution({v.name: v.varValue for v in prob.variables()}, "", sol_path)
+
+        data = {
+            "Status": plp.constants.LpStatus.get(prob.status, "Unknown"),
+            "Time": prob.solutionTime,
+        }
+        data.update({v.name: v.varValue for v in prob.variables()})
+
+        export_solution(data, "", sol_path)
 
     return prob.status, prob.variables()
 
