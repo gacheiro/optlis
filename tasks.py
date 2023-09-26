@@ -163,7 +163,7 @@ def _bulk_solve_static_cplex(
 ):
 
     if tt_off:
-        model = static.models.milp
+        model = static.models.milp.model_1
     else:
         model = static.models.milp.model_2
 
