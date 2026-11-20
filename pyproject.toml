@@ -1,6 +1,6 @@
 [project]
 name = "optlis"
-version = "0.2.0b2"
+version = "1.0.0"
 description = "Logistique d'Intervention suite aux catastrophes industrielles (LITIS, Université Le Havre Normandie)."
 readme = "README.md"
 license = "MIT"
