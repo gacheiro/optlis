@@ -1,11 +1,9 @@
-from math import isclose
 from itertools import product as prod
 
 import matplotlib.pyplot as plt
 
-from optlis.shared import import_solution
 from optlis.dynamic import load_instance
-
+from optlis.shared import import_solution
 
 MAKESPAN = 100
 
@@ -58,10 +56,10 @@ def plot_graphs(instance_path, sol_path):
     solution = import_solution(sol_path)
 
     print(f"Instance {instance_path} ", end="")
-    print(f"(global risk = {solution.get('global_risk') : .5f}, ", end="")
+    print(f"(global risk = {solution.get('global_risk'): .5f}, ", end="")
     print(f"makespan = {solution.get('makespan')})")
 
-    fig, axs = plt.subplots(ncols=2, figsize=(10, 4))
+    _fig, axs = plt.subplots(ncols=2, figsize=(10, 4))
     _plot_risk_by_time(axs[0], instance, solution)
     _plot_concentration_by_time(axs[1], instance, solution)
 

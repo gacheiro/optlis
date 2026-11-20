@@ -1,15 +1,14 @@
-from typing import Union, Tuple, Dict, Any
-
 from pathlib import Path
+from typing import Any
 
+import networkx as nx
 import numpy as np
-import networkx as nx  # type: ignore
 
 from optlis.static.problem_data import Instance, export_instance
 
 
 def generate_instance(
-    size: Tuple[int, int] = (1, 1), nb_teams: int = 1, seed: int = 0
+    size: tuple[int, int] = (1, 1), nb_teams: int = 1, seed: int = 0
 ) -> Instance:
     """Generates a problem instance."""
     lattice = nx.triangular_lattice_graph(size[0], size[1])
@@ -28,7 +27,9 @@ def generate_instance(
     # Updates the tasks' risk and duration attributes with values
     # from the uniform distributions [0.1, 1] and [1, 11]
     n = len(g.nodes)
-    for i, r, p in zip(range(1, n), rrng.uniform(0.1, 1, n), prng.integers(1, 11, n)):
+    for i, r, p in zip(
+        range(1, n), rrng.uniform(0.1, 1, n), prng.integers(1, 11, n), strict=False
+    ):
         g.nodes[i]["type"] = 1
         g.nodes[i]["r"] = r
         g.nodes[i]["p"] = p
@@ -36,7 +37,7 @@ def generate_instance(
     return Instance(g)
 
 
-def generate_benchmark(export_dir: Union[str, Path] = "", seed: int = 0) -> None:
+def generate_benchmark(export_dir: str | Path = "", seed: int = 0) -> None:
     """Generate the instance benchmark."""
     # Generates graphs with n = 9, 17, 33, 65 nodes (1 depot + n-1 tasks)
     for size in [(5, 1), (2, 9), (4, 11), (9, 11)]:
@@ -44,15 +45,15 @@ def generate_benchmark(export_dir: Union[str, Path] = "", seed: int = 0) -> None
         # which should be n = 9, 17, 33 and 65 (1 depot + n-1 tasks)
         instance = generate_instance(size, nb_teams=1, seed=seed)
         n = len(instance.nodes)
-        export_instance(instance, Path(f"{export_dir}/hx-n{n-1}-pu-ru-q{1}.dat"))
+        export_instance(instance, Path(f"{export_dir}/hx-n{n - 1}-pu-ru-q{1}.dat"))
 
         # Generates instances with 2^0, 2^1, ..., 2^log_2(n-1) teams
         for q in [2**i for i in range(1, 10) if 2**i < n] + [n - 1]:
             export_instance(
                 generate_instance(size, nb_teams=q, seed=seed),
-                Path(f"{export_dir}/hx-n{n-1}-pu-ru-q{q}.dat"),
+                Path(f"{export_dir}/hx-n{n - 1}-pu-ru-q{q}.dat"),
             )
 
 
-def from_command_line(args: Dict[str, Any]) -> None:
+def from_command_line(args: dict[str, Any]) -> None:
     generate_benchmark(args["export-dir"], args["seed"])

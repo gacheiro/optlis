@@ -1,2 +1,3 @@
-import optlis.dynamic.models.milp as milp
-import optlis.dynamic.models.ils as ils
+from optlis.dynamic.models import ils, milp
+
+__all__ = ["ils", "milp"]

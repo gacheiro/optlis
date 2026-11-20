@@ -1,26 +1,25 @@
-from typing import Tuple, List, Dict, Optional, Callable, Any
-
 import cProfile
 import logging
-import time
 import statistics
-from multiprocessing import Pool
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from multiprocessing import Pool
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
-from optlis.static.problem_data import Instance, load_instance
-
-from optlis.static.models.ctypes import (
-    c_solution,
+from optlis.static.cstructs import (
+    POINTER,
     c_budget,
+    c_double,
     c_int32,
     c_size_t,
-    c_double,
-    POINTER,
+    c_solution,
 )
 from optlis.static.models.localsearch import local_search
+from optlis.static.problem_data import Instance, load_instance
 
 
 @dataclass
@@ -55,8 +54,8 @@ class Solution:
         instance: Instance,
         task_list: npt.NDArray[np.int32],
         relaxation_threshold: float = 0,
-        start_times: Optional[npt.NDArray[np.int32]] = None,
-        finish_times: Optional[npt.NDArray[np.int32]] = None,
+        start_times: npt.NDArray[np.int32] | None = None,
+        finish_times: npt.NDArray[np.int32] | None = None,
         objective: float = float("inf"),
         consumed_budget: int = 1,
     ):
@@ -154,7 +153,7 @@ def perturbate(
     nswaps = int(nnodes * perturbation_strength / 2)
     while nswaps > 0:
         indexes = rng(low=0, high=nnodes, size=2)
-        if solution.try_swap(indexes.min(), indexes.max()):
+        if solution.try_swap(int(indexes.min()), int(indexes.max())):
             nswaps -= 1
 
 
@@ -162,9 +161,9 @@ def ils(
     instance: Instance,
     relaxation_threshold: float = 0.0,
     perturbation_strength: float = 0.5,
-    evaluations: Optional[int] = None,
+    evaluations: int | None = None,
     seed: int = 0,
-) -> Tuple[Solution, int, float]:
+) -> tuple[Solution, int, float]:
     """Runs ILS optimization loop."""
     initial_solution = construct_solution(instance, relaxation_threshold)
     start_time = time.time()
@@ -194,9 +193,9 @@ def optimize(
     parallel: int = 4,
     relaxation_threshold: float = 0.0,
     perturbation_strength: float = 0.5,
-    evaluations: Optional[int] = None,
+    evaluations: int | None = None,
     log_path=None,
-) -> List[Tuple[Solution, int, float]]:
+) -> list[tuple[Solution, int, float]]:
     """Loads and optimizes a problem instance. Uses multiple processes."""
 
     if log_path:
@@ -239,7 +238,7 @@ def optimize(
     return results
 
 
-def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
+def log_stats(results: list[tuple[Solution, int, float]]) -> None:
     solutions = [r[0] for r in results]
     objectives = [s.objective for s in solutions]
     min_objective, mean_objective, stddev_objective = (
@@ -258,7 +257,7 @@ def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
         max(budgets),
     )
     logging.info(
-        f"Budget - Min: {min_budget} Mean: {mean_budget:.2f} " f"Max: {max_budget}"
+        f"Budget - Min: {min_budget} Mean: {mean_budget:.2f} Max: {max_budget}"
     )
     elapsed_times = [r[2] for r in results]
     min_time, mean_time, max_time = (
@@ -267,11 +266,11 @@ def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
         max(elapsed_times),
     )
     logging.info(
-        f"Time - Min: {min_time:.3f} Mean: {mean_time:.3f} " f"Max: {max_time:.3f}\n"
+        f"Time - Min: {min_time:.3f} Mean: {mean_time:.3f} Max: {max_time:.3f}\n"
     )
 
 
-def from_command_line(args: Dict[str, Any]) -> None:
+def from_command_line(args: dict[str, Any]) -> None:
     instance = load_instance(args["instance-path"], args["travel_times"])
 
     if args["tuning"]:
@@ -287,7 +286,7 @@ def from_command_line(args: Dict[str, Any]) -> None:
         print(f"{solution.objective:.3f}", f"{time:.3f}")
 
     else:
-        res = optimize(
+        optimize(
             instance,
             runs=args["runs"],
             parallel=args["parallel"],

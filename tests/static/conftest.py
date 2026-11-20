@@ -1,8 +1,8 @@
-import pytest
 import networkx as nx
+import pytest
 
 from optlis.shared import import_solution
-from optlis.static.problem_data import load_instance, Instance
+from optlis.static.problem_data import Instance, load_instance
 
 
 @pytest.fixture(scope="session")
@@ -39,7 +39,7 @@ def instance_grid3x3_data():
 @pytest.fixture(scope="session")
 def instance_grid3x3(instance_grid3x3_data):
     """The example.dat as a Graph instance."""
-    G = nx.Graph()
+    G: nx.Graph[int] = nx.Graph()
     G.add_nodes_from(instance_grid3x3_data[0])
     G.add_edges_from(instance_grid3x3_data[1])
     return Instance(G)

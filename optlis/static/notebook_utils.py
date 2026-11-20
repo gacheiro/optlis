@@ -1,7 +1,7 @@
 import math
 
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
@@ -9,15 +9,13 @@ from optlis.shared import import_solution
 from optlis.static.problem_data import load_instance
 
 
-def y_axis(G, sol={}):
+def y_axis(G, sol=None):
     """Generates the y values (the sum of the risk of not cleaned sites)
     for plotting a solution."""
+    sol = sol or {}
     dest = G.tasks
     r = nx.get_node_attributes(G, "r")
-    cdf = lambda i: sol.get(f"cd_{i}") or sol.get(
-        f"C_{i}"
-    )  # compatibility between two tipes of solution formats
-    cd = {i: cdf(i) for i in dest}
+    cd = {i: _completion_date(sol, i) for i in dest}
     if None in cd.values():
         print(cd.values())
         raise ValueError("some of the completion dates are None")
@@ -28,13 +26,24 @@ def y_axis(G, sol={}):
         yield sum(r[i] for i in dest if cd[i] >= t)
 
 
+def _completion_date(sol, i):
+    # Compatibility between two types of solution formats
+    return sol.get(f"cd_{i}") or sol.get(f"C_{i}")
+
+
+def _start_date(sol, i):
+    # Compatibility between two types of solution formats
+    return sol.get(f"sd_{i}") or sol.get(f"S_{i}", 0)
+
+
 def plot_overall_risk(
-    instance_path, sol_paths=[], alpha=0.8, labels=[], print_data=False
+    instance_path, sol_paths=(), alpha=0.8, labels=(), print_data=False
 ):
     """Plot solutions sobreposed over a graph of risk per time period."""
+    x, y = [], []
     G = load_instance(instance_path)
     print(f"Instance {instance_path}")
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     for i, sol_path in enumerate(sol_paths):
         try:
             sol = import_solution(sol_path)
@@ -49,28 +58,29 @@ def plot_overall_risk(
             label = f"sol {i}"
         print(f"\n{label} makespan: {sol.get('makespan')}, area: {sum(y):.2f}")
         if print_data:
-            print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y)))
+            print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y, strict=True)))
         ax.fill_between(x, y, alpha=alpha, label=label)
     ax.set(xlabel="time", ylabel="accumulated risk")
     ax.legend(loc="upper right")
     if print_data:
-        print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y)))
+        print(" ".join(f"({_x}, {_y:.2f})" for _x, _y in zip(x, y, strict=True)))
     plt.show()
 
 
-def makespan(sol={}):
+def makespan(sol):
     """Returns the makespan of a solution."""
     return sol["makespan"]
 
 
-def overall_risk(G, sol={}):
+def overall_risk(G, sol=None):
     """Returns the overall risk of a solution."""
+    sol = sol or {}
     acc_risk = sum(y_axis(G, sol))
     # Checks for the accumulated risk in the solution.
     # If it's not defined, we ignore and return the computed value
-    assert math.isclose(
-        sol.get("overall_risk", acc_risk), acc_risk
-    ), f"accumulated risks differ {acc_risk} != {sol['overall_risk']}"
+    assert math.isclose(sol.get("overall_risk", acc_risk), acc_risk), (
+        f"accumulated risks differ {acc_risk} != {sol['overall_risk']}"
+    )
     return acc_risk
 
 
@@ -79,14 +89,10 @@ def plot_gantt_diagram(instance_path, sol_path, figsize=(8, 8)):
     inst, sol = (load_instance(instance_path), import_solution(sol_path))
 
     plt.rcdefaults()
-    fig, ax = plt.subplots(figsize=figsize)
+    _fig, ax = plt.subplots(figsize=figsize)
 
     jobs = sorted(inst.tasks, key=lambda x: inst.nodes[x]["r"])
-    sdf = lambda i: sol.get(f"sd_{i}") or sol.get(
-        f"S_{i}", 0
-    )  # compatibility between two tipes of solution formats
-
-    start_dates = [sdf(j) for j in jobs]
+    start_dates = [_start_date(sol, j) for j in jobs]
 
     durations = [inst.nodes[j]["p"] for j in jobs]
     y_pos = np.arange(len(jobs))
@@ -108,7 +114,7 @@ def linear_regression(x, y):
     return LinearRegression().fit(x, y)
 
 
-def plot_points_with_best_fit_line(ax, x, y, psize=80, labels=["x", "y"]):
+def plot_points_with_best_fit_line(ax, x, y, psize=80, labels=("x", "y")):
     """Plots a scatter graph with a best fit line."""
     ax.grid(True)
     ax.set_xlabel(labels[0]), ax.set_ylabel(labels[1])
@@ -140,22 +146,9 @@ def plot_task_policies(instance, sol, figsize=(18, 6)):
     ]
     y_labels = ("Task risk", "Task duration", "Distance between task and depot")
 
-    cdf = lambda i: sol.get(f"cd_{i}") or sol.get(
-        f"C_{i}"
-    )  # compatibility between two tipes of solution formats
-    x = np.array([cdf(i) for i in tasks])
+    x = np.array([_completion_date(sol, i) for i in tasks])
     x_label = "Completion time"
 
-    fig, axs = plt.subplots(ncols=len(ys), figsize=figsize)
-    for ax, y, y_label in zip(axs, ys, y_labels):
-        plot_points_with_best_fit_line(ax, x, y, labels=[x_label, y_label])
-
-
-def plot_function(strict, moderate, none):
-    """"""
-    fig, axs = plt.subplots(ncols=3, figsize=(18, 6))
-    for ax in axs:
-        for priority_rules in (strict, moderate, none):
-            axs.plot(x, y)
-        ax.set_xlabel("x")
-        ax.set_ylabel("y")
+    _fig, axs = plt.subplots(ncols=len(ys), figsize=figsize)
+    for ax, y, y_label in zip(axs, ys, y_labels, strict=True):
+        plot_points_with_best_fit_line(ax, x, y, labels=(x_label, y_label))

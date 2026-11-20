@@ -1,8 +1,8 @@
-from typing import Dict, Tuple, Any, Optional, Union, Callable
-
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
-import pulp as plp  # type: ignore
+import pulp as plp
 
 from optlis.shared import export_solution
 from optlis.static.problem_data import Instance, load_instance
@@ -105,32 +105,37 @@ def model_2(instance, relaxation_threshold=0.0):
     # Flow depart from depot
     for i in O:
         prob += (
-            plp.lpSum(y[i][j][t] for t in T for j in D) <= k[i]
-        ), f"C1_Flow_depart_from_origin_{i}"
+            (plp.lpSum(y[i][j][t] for t in T for j in D) <= k[i]),
+            f"C1_Flow_depart_from_origin_{i}",
+        )
 
     # Flow must enter every task
     for j in D:
         prob += (
-            plp.lpSum(y[i][j][t] for t in T for i in V if i != j) == 1
-        ), f"C2_Enter_{j}"
+            (plp.lpSum(y[i][j][t] for t in T for i in V if i != j) == 1),
+            f"C2_Enter_{j}",
+        )
 
     # Flow must leave every task
     for j in D:
         prob += (
-            plp.lpSum(y[j][i][t] for t in T for i in V if i != j) == 1
-        ), f"C3_Leave_{j}"
+            (plp.lpSum(y[j][i][t] for t in T for i in V if i != j) == 1),
+            f"C3_Leave_{j}",
+        )
 
     # Flow conservation constraints (allows idle times between consecutive tasks)
     for j in D:
         prob += (
-            plp.lpSum(t * y[j][i][t] for i in V if i != j for t in T) - C[j] >= 0
-        ), f"C4_Flow_conservation_{j}"
+            (plp.lpSum(t * y[j][i][t] for i in V if i != j for t in T) - C[j] >= 0),
+            f"C4_Flow_conservation_{j}",
+        )
 
     # Calculates the start times of tasks
     for j in D:
         prob += (
-            S[j] == plp.lpSum(t * y[i][j][t] for t in T for i in V if i != j)
-        ), f"C5_Start_{j}"
+            (S[j] == plp.lpSum(t * y[i][j][t] for t in T for i in V if i != j)),
+            f"C5_Start_{j}",
+        )
 
     # Precedence constraints
     for i, j in instance.precedence(d=relaxation_threshold):
@@ -139,10 +144,13 @@ def model_2(instance, relaxation_threshold=0.0):
     # Calculates the completion times of tasks
     for j in D:
         prob += (
-            C[j]
-            == plp.lpSum((t + s[i][j]) * y[i][j][t] for t in T for i in V if i != j)
-            + p[j]
-        ), f"C7_Completion_{j}"
+            (
+                C[j]
+                == plp.lpSum((t + s[i][j]) * y[i][j][t] for t in T for i in V if i != j)
+                + p[j]
+            ),
+            f"C7_Completion_{j}",
+        )
 
     # Calculates the makespan
     for j in D:
@@ -155,10 +163,10 @@ def optimize(
     instance: Instance,
     make_model: Callable[..., Any],
     relaxation_threshold: float = 0.0,
-    time_limit: Optional[int] = None,
-    log_path: Optional[Union[str, Path]] = None,
-    sol_path: Optional[Union[str, Path]] = None,
-) -> Tuple[int, Dict[str, Union[int, float]]]:
+    time_limit: int | None = None,
+    log_path: str | Path | None = None,
+    sol_path: str | Path | None = None,
+) -> tuple[int, dict[str, int | float]]:
     """Runs the model for an instance."""
     prob = make_model(instance, relaxation_threshold)
 
@@ -193,7 +201,7 @@ def optimize(
     return prob.status, prob.variables()
 
 
-def from_command_line(args: Dict[str, Any]) -> None:
+def from_command_line(args: dict[str, Any]) -> None:
     instance = load_instance(args["instance-path"], args["travel_times"])
 
     # Chooses models 1 or 2 based on the use of travel times

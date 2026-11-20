@@ -1,4 +1,4 @@
-from ctypes import *
+from ctypes import POINTER, Structure, c_double, c_int32, c_size_t
 
 
 class c_task(Structure):

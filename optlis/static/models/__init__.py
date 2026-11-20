@@ -1,8 +1,9 @@
 import argparse
 from pathlib import Path
 
-import optlis.static.models.milp as milp
-import optlis.static.models.ils as ils
+from optlis.static.models import ils, milp
+
+__all__ = ["ils", "milp", "solver_parser"]
 
 # Generic solver command line parser (for cplex and ils)
 solver_parser = argparse.ArgumentParser(add_help=False)

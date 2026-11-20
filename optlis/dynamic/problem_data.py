@@ -1,17 +1,22 @@
-from typing import Any, Dict, Union, Generator, Tuple, TextIO, Optional
-from pathlib import Path
 from functools import cached_property
+from pathlib import Path
+from typing import TextIO
 
 import networkx as nx
 import numpy as np
-import numpy.typing as npt
 
+from optlis.dynamic.cstructs import (
+    POINTER,
+    c_double,
+    c_instance,
+    c_int32,
+    c_size_t,
+)
 from optlis.shared import set_product
 from optlis.static.problem_data import Instance as StaticInstance
 
 
 class Instance(StaticInstance):
-
     EPSILON = 0.01
     NEUTRALIZING_SPEED = 0.3
     CLEANING_SPEED = 0.075
@@ -32,19 +37,10 @@ class Instance(StaticInstance):
 
     @property
     def resources(self):
-        return dict(
-            Qn=sum(nx.get_node_attributes(self, "Qn").values()),
-            Qc=sum(nx.get_node_attributes(self, "Qc").values()),
-        )
-
-    # TODO: rename this
-    @cached_property
-    def nodes_duration(self):
-        duration = np.zeros((len(self.nodes), len(self.time_periods)), dtype=np.int32)
-        for i in self.nodes:
-            for t in self.time_periods:
-                duration[i][t] = self.cleaning_duration(i, t)
-        return duration
+        return {
+            "Qn": sum(nx.get_node_attributes(self, "Qn").values()),
+            "Qc": sum(nx.get_node_attributes(self, "Qc").values()),
+        }
 
     @cached_property
     def cleaning_start_times(self):
@@ -153,7 +149,7 @@ class Instance(StaticInstance):
     def time_periods(self):
         raise DeprecationWarning
 
-    def c_struct(self) -> "c_instance":
+    def c_struct(self) -> c_instance:  # type: ignore[override]
         nnodes = len(self.nodes)
         ntasks = len(self.tasks)
         nproducts = len(self.products)
@@ -184,7 +180,7 @@ def load_instance(path):
     metabolization_rate = {}
     initial_concentration = {}
 
-    with open(path, "r") as f:
+    with open(path) as f:
         lines = f.readlines()
 
     assert lines[0].startswith("# format: dynamic")
@@ -242,7 +238,7 @@ def load_instance(path):
     return instance
 
 
-def export_instance(instance: Instance, outfile_path: Union[str, Path]) -> None:
+def export_instance(instance: Instance, outfile_path: str | Path) -> None:
     """Exports a problem instance to a file."""
     with open(outfile_path, "w") as outfile:
         _write_instance(instance, outfile)
@@ -284,12 +280,3 @@ def _write_instance(instance: Instance, outfile: TextIO) -> None:
 
     T = instance.time_units[-1]
     outfile.write(f"{T}\n")
-
-
-from optlis.dynamic.models.ctypes import (
-    c_instance,
-    c_int32,
-    c_size_t,
-    c_double,
-    POINTER,
-)

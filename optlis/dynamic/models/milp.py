@@ -1,10 +1,11 @@
-from typing import Dict, Any, Optional, Union
+import contextlib
 from pathlib import Path
+from typing import Any
 
 import pulp as plp
 
-from optlis.shared import set_product, export_solution
 from optlis.dynamic.problem_data import Instance, load_instance
+from optlis.shared import export_solution, set_product
 
 # Problem constants
 M = 999999
@@ -26,8 +27,12 @@ def make_lp(instance: Instance):
     NEUTRALIZING_START_TIMES = instance.neutralizing_start_times
 
     # Defines aliases for some methods
-    dr = lambda p: instance.degradation_rates[p]
-    mr = lambda p, q: instance.metabolizing_rates[p][q]
+    def dr(p):
+        return instance.degradation_rates[p]
+
+    def mr(p, q):
+        return instance.metabolizing_rates[p][q]
+
     # nd = instance.neutralizing_duration
 
     # Creates the model's variables
@@ -106,7 +111,6 @@ def make_lp(instance: Instance):
 
     # Neutralizing operation
     for i, p, t in set_product(TASKS, PRODUCTS, T[1:]):
-
         # Checks wether a neutralizing operation is active
         time_window = range(NEUTRALIZING_START_TIMES[i][p][t], t + 1)
         is_active = plp.lpSum(x[i][p][tau] for tau in time_window)
@@ -141,7 +145,6 @@ def make_lp(instance: Instance):
 
     # On-site operations cannot overlap
     for i, t in set_product(TASKS, T):
-
         cleaning = plp.lpSum(
             y[i][tau] for tau in range(CLEANING_START_TIMES[i][t], t + 1)
         )
@@ -183,9 +186,9 @@ def make_lp(instance: Instance):
 
 def optimize(
     instance: Instance,
-    time_limit: Optional[int] = None,
-    log_path: Optional[Union[str, Path]] = None,
-    sol_path: Optional[Union[str, Path]] = None,
+    time_limit: int | None = None,
+    log_path: str | Path | None = None,
+    sol_path: str | Path | None = None,
 ):
     """Runs the model for an instance."""
     prob = make_lp(instance)
@@ -204,10 +207,8 @@ def optimize(
 
     # Prints variables with their optimized values
     print("")
-    try:
+    with contextlib.suppress(TypeError):
         print(f"objective_function = {prob.objective.value():.4f}")
-    except TypeError:
-        pass
 
     lhs_size = max(len(v.name) for v in prob.variables())
     for v in prob.variables():
@@ -222,7 +223,7 @@ def optimize(
         export_solution({v.name: v.varValue for v in prob.variables()}, "", sol_path)
 
 
-def from_command_line(args: Dict[str, Any]) -> None:
+def from_command_line(args: dict[str, Any]) -> None:
     instance = load_instance(args["instance-path"])
 
     optimize(

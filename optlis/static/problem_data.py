@@ -1,26 +1,27 @@
-from typing import Any, Dict, Union, Generator, Tuple, TextIO, Optional
-
 import warnings
+from collections.abc import Generator
+from functools import cached_property
 from math import ceil
 from pathlib import Path
-from functools import cached_property
+from typing import Any, TextIO
 
-import networkx as nx  # type: ignore
+import networkx as nx
 import numpy as np
 import numpy.typing as npt
 
-from optlis.static.models.ctypes import c_instance, c_int32, c_size_t, c_double, POINTER
+from optlis.static.cstructs import POINTER, c_double, c_instance, c_int32, c_size_t
 
 
 class Instance(nx.Graph):
     """Subclass of nx.Graph class with some utility properties."""
 
-    time_horizon: Optional[int] = None
+    time_horizon: int | None = None
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    # NOTE: some of these methods should return either a read-only np.array or a new copy
+    # NOTE: some of these methods should return either a read-only np.array
+    # or a new copy
     @cached_property
     def depots(self) -> npt.NDArray[np.int32]:
         """Returns the list of depots."""
@@ -96,7 +97,7 @@ class Instance(nx.Graph):
         )
 
     # TODO: change `d` to `relaxation_threshold`
-    def precedence(self, d: float = 0) -> Generator[Tuple[int, int], None, None]:
+    def precedence(self, d: float = 0) -> Generator[tuple[int, int], None, None]:
         """Generates the set precedence for a given relaxation threshold in the form of
         (i, j) tuples.
 
@@ -121,11 +122,11 @@ class Instance(nx.Graph):
         )
 
 
-def load_instance(path: Union[str, Path], use_setup_times: bool = True) -> Instance:
+def load_instance(path: str | Path, use_setup_times: bool = True) -> Instance:
     """Loads an instance from a file."""
     nodes = []
     edges = []
-    with open(path, "r") as f:
+    with open(path) as f:
         nb_nodes = int(f.readline())
         for _ in range(nb_nodes):
             id, type, p, q, r = f.readline().split()
@@ -157,11 +158,13 @@ def load_instance(path: Union[str, Path], use_setup_times: bool = True) -> Insta
             T = int(f.readline())
             instance.time_horizon = T
         except (EOFError, ValueError):
-            warnings.warn("the instance file doesn't provide a time horizon")
+            warnings.warn(
+                "the instance file doesn't provide a time horizon", stacklevel=2
+            )
     return instance
 
 
-def export_instance(instance: Instance, outfile_path: Union[str, Path]) -> None:
+def export_instance(instance: Instance, outfile_path: str | Path) -> None:
     """Exports a problem instance to a file."""
     with open(outfile_path, "w") as outfile:
         _write_instance(instance, outfile)
@@ -173,12 +176,12 @@ def _write_instance(instance: Instance, outfile: TextIO) -> None:
     nb_edges = len(instance.edges)
     outfile.write(f"{nb_nodes}\n")
 
-    for (id, data) in instance.nodes(data=True):
+    for id, data in instance.nodes(data=True):
         type, p, q, r = (data["type"], data["p"], data["q"], data["r"])
         outfile.write(f"{id} {type} {p} {q} {r:.1f}\n")
 
     outfile.write(f"{nb_edges}\n")
-    for (i, j) in instance.edges():
+    for i, j in instance.edges():
         outfile.write(f"{i} {j}\n")
 
     T = instance.time_periods[-1]

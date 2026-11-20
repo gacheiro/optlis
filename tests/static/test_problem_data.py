@@ -1,11 +1,11 @@
-from pathlib import Path
 from io import StringIO
+from pathlib import Path
 
-import pytest
 import numpy as np
+import pytest
 
 from optlis.shared import _write_solution
-from optlis.static.problem_data import load_instance, _write_instance
+from optlis.static.problem_data import _write_instance, load_instance
 
 
 def test_Graph(example_instance):

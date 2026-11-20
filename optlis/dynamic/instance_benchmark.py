@@ -1,14 +1,13 @@
-from typing import Union, Tuple, Dict, Any
-
 from pathlib import Path
+from typing import Any
 
+import networkx as nx
 import numpy as np
-import networkx as nx  # type: ignore
 
 from optlis.dynamic.problem_data import Instance, export_instance
 
 
-def _graph(size: Tuple[int, int] = (1, 1), res: Tuple[int, int] = (1, 1)) -> Instance:
+def _graph(size: tuple[int, int] = (1, 1), res: tuple[int, int] = (1, 1)) -> nx.Graph:
     """Generates a problem instance."""
     lattice = nx.triangular_lattice_graph(size[0], size[1])
     g = nx.convert_node_labels_to_integers(lattice)
@@ -32,7 +31,6 @@ def two_species_instance(size, res, zero_degradation_rate=False, random_seed=0):
     g = _graph(size, res)
 
     nnodes = len(g.nodes)
-    ntasks = len([n for n in g.nodes if g.nodes[n]["type"] == 1])
     rng = np.random.default_rng(random_seed)
 
     nproducts = 3
@@ -44,10 +42,7 @@ def two_species_instance(size, res, zero_degradation_rate=False, random_seed=0):
     initial_concentration = rng.normal(0.5, 0.5, (nnodes, nproducts))
     for i in range(nnodes):
         for j in range(nproducts):
-            if j == 0:
-                initial_concentration[i][j] = 0
-
-            elif initial_concentration[i][j] < 0:
+            if j == 0 or initial_concentration[i][j] < 0:
                 initial_concentration[i][j] = 0
 
     if zero_degradation_rate:
@@ -66,15 +61,14 @@ def two_species_instance(size, res, zero_degradation_rate=False, random_seed=0):
     )
 
 
-def generate_benchmark(export_dir: Union[str, Path] = "", random_seed: int = 0) -> None:
+def generate_benchmark(export_dir: str | Path = "", random_seed: int = 0) -> None:
     """Generate the instance benchmark."""
     # Generates graphs with n = 9, 17, 33 (1 depot + n-1 tasks)
     for zero_degradation_rate in (False, True):
-
         if zero_degradation_rate:
-            _export_dir = export_dir / "zero"
+            _export_dir = Path(export_dir) / "zero"
         else:
-            _export_dir = export_dir / "nonzero"
+            _export_dir = Path(export_dir) / "nonzero"
 
         _export_dir.mkdir(parents=True, exist_ok=True)
 
@@ -88,7 +82,7 @@ def generate_benchmark(export_dir: Union[str, Path] = "", random_seed: int = 0) 
                 random_seed=random_seed,
             )
             n = len(instance.nodes)
-            export_instance(instance, Path(f"{_export_dir}/hx-n{n-1}-pu-ru-q{1}.dat"))
+            export_instance(instance, Path(f"{_export_dir}/hx-n{n - 1}-pu-ru-q{1}.dat"))
 
             # Generates instances with 2^0, 2^1, ..., 2^log_2(n-1) teams
             for q in [2**i for i in range(1, 10) if 2**i < n] + [n - 1]:
@@ -99,9 +93,9 @@ def generate_benchmark(export_dir: Union[str, Path] = "", random_seed: int = 0) 
                         zero_degradation_rate=zero_degradation_rate,
                         random_seed=random_seed,
                     ),
-                    Path(f"{_export_dir}/hx-n{n-1}-pu-ru-q{q}.dat"),
+                    Path(f"{_export_dir}/hx-n{n - 1}-pu-ru-q{q}.dat"),
                 )
 
 
-def from_command_line(args: Dict[str, Any]) -> None:
+def from_command_line(args: dict[str, Any]) -> None:
     generate_benchmark(args["export-dir"], args["seed"])

@@ -1,9 +1,9 @@
 from pathlib import Path
-from invoke import task, Failure
 
+from invoke import task
 
 import optlis
-from optlis import static, dynamic
+from optlis import dynamic, static
 
 ILS_MAX_EVALUATIONS = 0  # auto: |V| * 10_000 evaluations
 CPLEX_TIME_LIMIT = 14_000  # 4 hours
@@ -121,12 +121,9 @@ def _bulk_solve_static_ils(
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = static.problem_data.load_instance(path, not tt_off)
 
-        if log_dir:
-            log_path = Path(log_dir) / f"{path.stem}.log"
-        else:
-            log_path = None
+        log_path = Path(log_dir) / f"{path.stem}.log" if log_dir else None
 
-        results = static.models.ils.optimize(
+        static.models.ils.optimize(
             instance=instance,
             runs=repeat,
             parallel=parallel,
@@ -143,12 +140,9 @@ def _bulk_solve_dynamic_ils(inst_dir, stop, repeat, parallel, log_dir):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = dynamic.problem_data.load_instance(path)
 
-        if log_dir:
-            log_path = Path(log_dir) / f"{path.stem}.log"
-        else:
-            log_path = None
+        log_path = Path(log_dir) / f"{path.stem}.log" if log_dir else None
 
-        results = dynamic.models.ils.optimize(
+        dynamic.models.ils.optimize(
             instance=instance,
             runs=repeat,
             parallel=parallel,
@@ -162,27 +156,18 @@ def _bulk_solve_static_cplex(
     inst_dir, relaxation, time_limit, tt_off, log_dir, sol_dir
 ):
 
-    if tt_off:
-        model = static.models.milp
-    else:
-        model = static.models.milp.model_2
+    model = static.models.milp.model_1 if tt_off else static.models.milp.model_2
 
     inst_paths = sorted(Path(inst_dir).glob("hx-*.dat"))
     for i, path in enumerate(inst_paths, start=1):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = static.problem_data.load_instance(path, not tt_off)
 
-        if sol_dir:
-            sol_path = Path(sol_dir) / f"{path.stem}.sol"
-        else:
-            sol_path = None
+        sol_path = Path(sol_dir) / f"{path.stem}.sol" if sol_dir else None
 
-        if log_dir:
-            log_path = Path(log_dir) / f"{path.stem}.log"
-        else:
-            log_path = None
+        log_path = Path(log_dir) / f"{path.stem}.log" if log_dir else None
 
-        results = static.models.milp.optimize(
+        static.models.milp.optimize(
             instance=instance,
             make_model=model,
             relaxation_threshold=relaxation,
@@ -200,17 +185,11 @@ def _bulk_solve_dynamic_cplex(inst_dir, time_limit, log_dir, sol_dir):
         print(f"Solving instance {path} ({i} of {len(inst_paths)})...")
         instance = dynamic.problem_data.load_instance(path)
 
-        if sol_dir:
-            sol_path = Path(sol_dir) / f"{path.stem}.sol"
-        else:
-            sol_path = None
+        sol_path = Path(sol_dir) / f"{path.stem}.sol" if sol_dir else None
 
-        if log_dir:
-            log_path = Path(log_dir) / f"{path.stem}.log"
-        else:
-            log_path = None
+        log_path = Path(log_dir) / f"{path.stem}.log" if log_dir else None
 
-        results = dynamic.models.milp.optimize(
+        dynamic.models.milp.optimize(
             instance=instance,
             time_limit=time_limit,
             log_path=log_path,

@@ -1,11 +1,10 @@
 import argparse
 from pathlib import Path
 
-import optlis.static.models
-import optlis.static.instance_benchmark
-
 import optlis.dynamic.instance_benchmark
 import optlis.dynamic.models
+import optlis.static.instance_benchmark
+import optlis.static.models
 
 # Top level parser
 parser = argparse.ArgumentParser()

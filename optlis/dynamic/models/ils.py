@@ -1,28 +1,26 @@
-from typing import Tuple, List, Dict, Optional, Callable, Any
-
-import cProfile
 import logging
-import time
 import statistics
-from multiprocessing import Pool
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
+from multiprocessing import Pool
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
-from optlis.shared import set_product
-from optlis.dynamic.problem_data import Instance, load_instance
-
-from optlis.dynamic.models.ctypes import (
-    c_task,
-    c_solution,
+from optlis.dynamic.cstructs import (
+    POINTER,
     c_budget,
+    c_double,
     c_int32,
     c_size_t,
-    c_double,
-    POINTER,
+    c_solution,
+    c_task,
 )
 from optlis.dynamic.models.localsearch import local_search
+from optlis.dynamic.problem_data import Instance, load_instance
+from optlis.shared import set_product
 
 
 @dataclass
@@ -51,7 +49,7 @@ class Solution:
         self,
         instance: Instance,
         task_list: npt.NDArray[Any],
-        nodes_concentration: Optional[npt.NDArray[Any]] = None,
+        nodes_concentration: npt.NDArray[Any] | None = None,
         objective: float = float("inf"),
         consumed_budget: int = 1,
     ):
@@ -108,8 +106,8 @@ class Solution:
         )
 
 
-def create_task_list(tasks: List[Tuple[int, int, int]]):
-    """Returns a numpy array with the corret types (for correct communication with the c code)."""
+def create_task_list(tasks: list[tuple[int, int, int]]):
+    """Returns a numpy array with the correct types (to communicate with the C code)."""
     return np.array(tasks, dtype=[("type", "i"), ("site", "i"), ("target", "i")])
 
 
@@ -132,16 +130,16 @@ def perturbate(
     nswaps = int(nnodes * perturbation_strength / 2)
     while nswaps > 0:
         indexes = rng(low=0, high=nnodes, size=2)
-        if solution.try_swap(indexes.min(), indexes.max()):
+        if solution.try_swap(int(indexes.min()), int(indexes.max())):
             nswaps -= 1
 
 
 def ils(
     instance: Instance,
     perturbation_strength: float = 0.5,
-    evaluations: Optional[int] = None,
+    evaluations: int | None = None,
     seed: int = 0,
-) -> Tuple[Solution, int, float]:
+) -> tuple[Solution, int, float]:
     """Runs ILS optimization loop."""
     # evaluations = evaluations or np.iinfo(np.int32).max
     current_solution = construct_solution(instance)
@@ -171,9 +169,9 @@ def optimize(
     runs: int = 35,
     parallel: int = 4,
     perturbation_strength: float = 0.5,
-    evaluations: Optional[int] = None,
+    evaluations: int | None = None,
     log_path=None,
-) -> List[Tuple[Solution, int, float]]:
+) -> list[tuple[Solution, int, float]]:
     """Loads and optimizes a problem instance. Uses multiple processes."""
 
     if log_path:
@@ -214,7 +212,7 @@ def optimize(
     return results
 
 
-def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
+def log_stats(results: list[tuple[Solution, int, float]]) -> None:
     solutions = [r[0] for r in results]
     objectives = [s.objective for s in solutions]
     min_objective, mean_objective, stddev_objective = (
@@ -233,7 +231,7 @@ def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
         max(budgets),
     )
     logging.info(
-        f"Budget - Min: {min_budget} Mean: {mean_budget:.2f} " f"Max: {max_budget}"
+        f"Budget - Min: {min_budget} Mean: {mean_budget:.2f} Max: {max_budget}"
     )
     elapsed_times = [r[2] for r in results]
     min_time, mean_time, max_time = (
@@ -242,14 +240,14 @@ def log_stats(results: List[Tuple[Solution, int, float]]) -> None:
         max(elapsed_times),
     )
     logging.info(
-        f"Time - Min: {min_time:.3f} Mean: {mean_time:.3f} " f"Max: {max_time:.3f}\n"
+        f"Time - Min: {min_time:.3f} Mean: {mean_time:.3f} Max: {max_time:.3f}\n"
     )
 
 
-def from_command_line(args: Dict[str, Any]) -> None:
+def from_command_line(args: dict[str, Any]) -> None:
     instance = load_instance(args["instance-path"])
 
-    res = optimize(
+    optimize(
         instance,
         runs=args["runs"],
         parallel=args["parallel"],

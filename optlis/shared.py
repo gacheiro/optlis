@@ -1,15 +1,14 @@
-from typing import Any, Dict, Union, TextIO
-from pathlib import Path
-
 from itertools import product
+from pathlib import Path
+from typing import TextIO
 
 set_product = product
 
 
-def import_solution(path: Union[str, Path]) -> Dict[str, Union[int, float]]:
+def import_solution(path: str | Path) -> dict[str, int | float]:
     """Imports a solution from a file."""
-    variables: Dict[str, Union[int, float]] = {}
-    with open(path, "r") as sol_file:
+    variables: dict[str, int | float] = {}
+    with open(path) as sol_file:
         # Discard first line (header)
         _ = sol_file.readline()
         for line in sol_file:
@@ -22,9 +21,9 @@ def import_solution(path: Union[str, Path]) -> Dict[str, Union[int, float]]:
 
 
 def export_solution(
-    solution: Dict[str, Union[int, float]],
-    instance_path: Union[str, Path],
-    outfile_path: Union[str, Path],
+    solution: dict[str, int | float],
+    instance_path: str | Path,
+    outfile_path: str | Path,
 ) -> None:
     """Exports a solution to a simple text file since
     pulp's solution files are too big. We only write
@@ -35,8 +34,8 @@ def export_solution(
 
 
 def _write_solution(
-    solution: Dict[str, Union[int, float]],
-    instance_path: Union[str, Path],
+    solution: dict[str, int | float],
+    instance_path: str | Path,
     outfile: TextIO,
 ) -> None:
     """Writes a solution to a file."""
