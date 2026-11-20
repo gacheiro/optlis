@@ -2,6 +2,52 @@
 Code for the project _Logistique d'Intervention suite aux catastrophes industrielles_
 developed at the LITIS lab, Université Le Havre Normandie.
 
+## Publications
+This code supports the following publications:
+
+- **Static problem** (`optlis/static`): T. J. Barbalho, J. L. J. Laredo and A. C. Santos.
+  *The resource-constrained project scheduling problem for risk reduction after industrial
+  disasters involving dangerous substances.* OR Spectrum, 48(1):293–323, 2026 (published
+  online 2025). Open access (CC BY 4.0).
+  [doi:10.1007/s00291-025-00822-1](https://doi.org/10.1007/s00291-025-00822-1)
+- **Dynamic problem** (`optlis/dynamic`): T. J. Barbalho, A. C. Santos, J. L. J. Laredo and
+  C. Duhamel. *Modelling and Solving a Scheduling Problem with Hazardous Products Dynamic
+  Evolution.* In: Metaheuristics (MIC 2024), Lecture Notes in Computer Science, pp. 249–263.
+  Springer, Cham, 2024.
+  [doi:10.1007/978-3-031-62922-8_17](https://doi.org/10.1007/978-3-031-62922-8_17)
+
+<details>
+<summary>BibTeX</summary>
+
+```bibtex
+@article{barbalho2026rcpsp,
+  title     = {The resource-constrained project scheduling problem for risk reduction
+               after industrial disasters involving dangerous substances},
+  author    = {Barbalho, Thiago J. and Laredo, Juan Luis Jim{\'e}nez and Santos, Andr{\'e}a Cynthia},
+  journal   = {OR Spectrum},
+  volume    = {48},
+  number    = {1},
+  pages     = {293--323},
+  year      = {2026},
+  publisher = {Springer},
+  doi       = {10.1007/s00291-025-00822-1}
+}
+
+@inproceedings{barbalho2024dynamic,
+  title     = {Modelling and Solving a Scheduling Problem with Hazardous Products
+               Dynamic Evolution},
+  author    = {Barbalho, Thiago J. and Santos, Andr{\'e}a Cynthia and Laredo, Juan L. J.
+               and Duhamel, Christophe},
+  booktitle = {Metaheuristics},
+  series    = {Lecture Notes in Computer Science},
+  pages     = {249--263},
+  year      = {2024},
+  publisher = {Springer, Cham},
+  doi       = {10.1007/978-3-031-62922-8_17}
+}
+```
+</details>
+
 ## Requirements
 - [uv](https://docs.astral.sh/uv/) (it installs the right Python version, 3.12+, for you)
 - `gcc` and `make` to build the local search written in C
